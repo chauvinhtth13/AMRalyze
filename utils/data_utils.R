@@ -1,3 +1,5 @@
+library(lubridate)
+
 read_file <- function(file_path, ext, sheet = NULL) {
   if (!file.exists(file_path)) stop("File not found")
   if (ext == "csv") {
@@ -9,36 +11,47 @@ read_file <- function(file_path, ext, sheet = NULL) {
   }
 }
 
+
+
 select_collumn_data <- function(df, structure, inputs) {
   if (structure == "0") {
-    req(inputs$AB_type_0)
+    collumn_selector <- c(
+      inputs$PID,
+      inputs$SID,
+      inputs$Sample_Data,
+      inputs$Sample_Type,
+      inputs$Pathogen,
+      inputs$AB_type_0
+    )
+    collumn_selector <- collumn_selector[collumn_selector != 'None']
     df %>%
-      select(
-        inputs$PID,
-        inputs$SID,
-        inputs$Sample_Data,
-        inputs$Sample_Type,
-        inputs$Pathogen,
-        all_of(inputs$AB_type_0)
-      ) %>%
-      mutate(across(inputs$AB_type_0, as.character))
+      select(all_of(collumn_selector))
   } else {
-    req(inputs$AB_type_1, inputs$MIC)
+    collumn_selecto <- c(
+      inputs$PID,
+      inputs$SID,
+      inputs$Sample_Data,
+      inputs$Sample_Type,
+      inputs$Pathogen,
+      inputs$AB_type_1,
+      inputs$MIC,
+      inputs$interpretation,
+      inputs$Zone_Size,
+      inputs$Methods
+    )
+    collumn_selecto <- collumn_selecto[collumn_selector != 'None']
     df %>%
       select(
-        inputs$PID,
-        inputs$SID,
-        inputs$Sample_Data,
-        inputs$Sample_Type,
-        inputs$Pathogen,
-        inputs$AB_type_1,
-        inputs$MIC,
-        inputs$interpretation,
-        inputs$Zone_Size,
-        inputs$Methods
+        all_of(collumn_selector)
       )
   }
 }
+
+# character2data <- function(inputs) {
+#   if(is.)
+#   type1 <-
+# }
+
 
 process_ast_data <- function(df, structure, inputs) {
   if (structure == "0") {
@@ -70,6 +83,22 @@ process_ast_data <- function(df, structure, inputs) {
           as.sir(MIC, mo = mo_code, ab = ab_code, guideline = inputs$interpretation),
           as.sir(Zone_Size, mo = mo_code, ab = ab_code, guideline = inputs$interpretation)
         )
+      )
+  }
+}
+
+df2class <- function(df, structure, inputs)
+{
+  list_patient = list()
+  if (structure == "0") {
+    
+  } else {
+    df %>%
+      mutate(
+        Sample_Date = as.Date(inputs$Sample_Data),
+        Sample_Type = as.character(inputs$Sample_Type),
+        PID = as.character(inputs$PID),
+        SID = as.character(inputs$SID)
       )
   }
 }

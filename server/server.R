@@ -6,6 +6,7 @@ server <- function(input, output, session) {
   rv <- reactiveValues(
     raw_data = NULL,
     processed_data = NULL,
+    patient_class = NULL,
     interpreted_data = NULL,
     file_info = list(
       ext = NULL,
