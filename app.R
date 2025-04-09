@@ -1,16 +1,15 @@
 library(shiny)
 library(shinyWidgets)
+library(bslib)
 library(shinyjs)
 library(DT)
-library(ggplot2)
+
+library(AMR)
+library(tidyverse)
 library(dplyr)
 library(readxl)
-library(AMR)
-library(tools)
 
 source("ui/ui.R")
 source("server/server.R")
-source("utils/ui_utils.R")
-source("utils/data_utils.R")
 
 shinyApp(ui = ui, server = server)
