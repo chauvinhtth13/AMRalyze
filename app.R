@@ -1,4 +1,4 @@
-###### 0. Load Libraries #####
+# --- 0. Load Libraries ---
 library(shiny)
 library(shinyWidgets)
 library(bslib)
@@ -27,58 +27,62 @@ source("utils/ui_utils.R", local = TRUE)
 ui <- page_navbar(
   title = "AMRalyze Dashboard",
   theme = bs_theme(version = 5, bootswatch = "cerulean"),
-  header = tags$head(shinyjs::useShinyjs(), tags$style(
-    HTML("#file_browse_progress.progress { display: none !important; }") # Keep hiding default progress
-  ), tags$script(
-    HTML(
-      # --- JAVASCRIPT BUG NOTE ---
-      # The JavaScript below aims to enable Shift+Click range selection
-      # for the 'AB_cols' Virtual Select input.
-      # *** CURRENTLY, THE LOGIC IS INCOMPLETE. ***
-      # The for-loop `for (var i = start; i <= end; i++) {}` is empty
-      # and does not actually select the range.
-      # To fix this, the JS needs to be updated to:
-      # 1. Find the option elements within the calculated range (start to end).
-      # 2. Get their values.
-      # 3. Use the Virtual Select JS API (e.g., `virtualSelectElement.setValue(...)`)
-      #    to programmatically select those options.
-      # --- END JAVASCRIPT BUG NOTE ---
-      "$(document).on('shiny:connected', function(event) {",
-      "  var vsInputId = 'AB_cols';",
-      "  var lastSelectedIndex = -1;",
-      "  var virtualSelectElement = document.getElementById(vsInputId);",
-      "  if (virtualSelectElement && virtualSelectElement.virtualSelect) {",
-      "      $(virtualSelectElement).on('click', '.vscomp-option', function(e) {",
-      "          var clickedOption = $(this);",
-      "          var currentIndex = clickedOption.data('index');",
-      "          console.log('Clicked index:', currentIndex, 'Shift:', e.shiftKey, 'Last:', lastSelectedIndex);",
-      "          if (e.shiftKey && lastSelectedIndex !== -1) {",
-      "              e.preventDefault(); // Prevent default toggle on shift-click range",
-      "              var start = Math.min(lastSelectedIndex, currentIndex);",
-      "              var end = Math.max(lastSelectedIndex, currentIndex);",
-      "              var optionsToSelect = [];",
-      "              // --- FIX NEEDED HERE ---",
-      "              // Loop should identify options and add values to optionsToSelect",
-      "              // Example (conceptual - needs testing with VirtualSelect structure):",
-      "              // $(virtualSelectElement).find('.vscomp-option').each(function() {",
-      "              //   var idx = $(this).data('index'); ",
-      "              //   if (idx >= start && idx <= end) {",
-      "              //     optionsToSelect.push($(this).data('value')); ",
-      "              //   }",
-      "              // });",
-      "              // virtualSelectElement.setValue(optionsToSelect); // Call API to select",
-      "              // --- END FIX NEEDED ---",
-      "              console.log('Range selected (JS NEEDS FIX):', optionsToSelect);",
-      "          } else {",
-      "              lastSelectedIndex = clickedOption.data('index'); // Update last index only if not shift-clicking range",
-      "          }",
-      "      });",
-      "  } else {",
-      "      console.error('Could not find Virtual Select instance for:', vsInputId);",
-      "  }",
-      "});"
+  header = tags$head(
+    shinyjs::useShinyjs(),
+    tags$style(
+      HTML("#file_browse_progress.progress { display: none !important; }") # Keep hiding default progress
+    ),
+    tags$script(
+      HTML(
+        # --- JAVASCRIPT BUG NOTE ---
+        # The JavaScript below aims to enable Shift+Click range selection
+        # for the 'AB_cols' Virtual Select input.
+        # *** CURRENTLY, THE LOGIC IS INCOMPLETE. ***
+        # The for-loop `for (var i = start; i <= end; i++) {}` is empty
+        # and does not actually select the range.
+        # To fix this, the JS needs to be updated to:
+        # 1. Find the option elements within the calculated range (start to end).
+        # 2. Get their values.
+        # 3. Use the Virtual Select JS API (e.g., `virtualSelectElement.setValue(...)`)
+        #    to programmatically select those options.
+        # --- END JAVASCRIPT BUG NOTE ---
+        "$(document).on('shiny:connected', function(event) {",
+        "  var vsInputId = 'AB_cols';",
+        "  var lastSelectedIndex = -1;",
+        "  var virtualSelectElement = document.getElementById(vsInputId);",
+        "  if (virtualSelectElement && virtualSelectElement.virtualSelect) {",
+        "      $(virtualSelectElement).on('click', '.vscomp-option', function(e) {",
+        "          var clickedOption = $(this);",
+        "          var currentIndex = clickedOption.data('index');",
+        "          console.log('Clicked index:', currentIndex, 'Shift:', e.shiftKey, 'Last:', lastSelectedIndex);",
+        "          if (e.shiftKey && lastSelectedIndex !== -1) {",
+        "              e.preventDefault(); // Prevent default toggle on shift-click range",
+        "              var start = Math.min(lastSelectedIndex, currentIndex);",
+        "              var end = Math.max(lastSelectedIndex, currentIndex);",
+        "              var optionsToSelect = [];",
+        "              // --- FIX NEEDED HERE ---",
+        "              // Loop should identify options and add values to optionsToSelect",
+        "              // Example (conceptual - needs testing with VirtualSelect structure):",
+        "              // $(virtualSelectElement).find('.vscomp-option').each(function() {",
+        "              //   var idx = $(this).data('index'); ",
+        "              //   if (idx >= start && idx <= end) {",
+        "              //     optionsToSelect.push($(this).data('value')); ",
+        "              //   }",
+        "              // });",
+        "              // virtualSelectElement.setValue(optionsToSelect); // Call API to select",
+        "              // --- END FIX NEEDED ---",
+        "              console.log('Range selected (JS NEEDS FIX):', optionsToSelect);",
+        "          } else {",
+        "              lastSelectedIndex = clickedOption.data('index'); // Update last index only if not shift-clicking range",
+        "          }",
+        "      });",
+        "  } else {",
+        "      console.error('Could not find Virtual Select instance for:', vsInputId);",
+        "  }",
+        "});"
+      )
     )
-  )),
+  ),
   ##### 1.1. Dashboard Tab #####
   nav_panel(title = "Dashboard", card(
     layout_columns(
@@ -103,9 +107,10 @@ ui <- page_navbar(
         theme = "success"
       )
     ),
-    card(card_header("Summary Pathogen"), card_body(
-      plotOutput("pathogen_summary_plot", height = "100%")
-    )),
+    card(
+      card_header("Summary Pathogen"),
+      card_body(plotOutput("pathogen_summary_plot", height = "100%"))
+    ),
     layout_columns(
       col_widths = c(6, 6),
       card(card_header("Raw Data"), card_body(
@@ -274,7 +279,7 @@ ui <- page_navbar(
                   actionButton("btn_process", "Process Data", class = "btn-success w-100")
                 ),
               ),
-            ##### 1.2.2. Main Content Area #####
+              ##### 1.2.2. Main Content Area #####
               card(
                 card_header("Processed Data Review"),
                 card_body(
@@ -319,9 +324,7 @@ ui <- page_navbar(
                     strong(textOutput(outputId = "GramStain_text")),
                     strong(textOutput(outputId = "MDR_text")),
                     hr(),
-                    strong(p(
-                      "Antimicrobial Susceptibility Test Results:"
-                    )),
+                    strong(p("Antimicrobial Susceptibility Test Results:")),
                     DT::dataTableOutput("AST_data_view_table")
                   )
                 )
@@ -413,24 +416,16 @@ server <- function(input, output, session) {
   })
   
   ##### 2.1.3. Conditional UI Logic #####
-  output$show_sheet_selector <- reactive({
-    !is.null(rv$file_info$ext) && rv$file_info$ext == "xlsx"
-  })
+  output$show_sheet_selector <- reactive({ !is.null(rv$file_info$ext) && rv$file_info$ext == "xlsx" })
   outputOptions(output, "show_sheet_selector", suspendWhenHidden = FALSE)
-  
-  output$show_upload_button <- reactive({
-    rv$file_info$ready_for_upload
-  })
+
+  output$show_upload_button <- reactive({ rv$file_info$ready_for_upload })
   outputOptions(output, "show_upload_button", suspendWhenHidden = FALSE)
-  
-  output$show_mapping_ui <- reactive({
-    rv$show_mapping
-  })
+
+  output$show_mapping_ui <- reactive({ rv$show_mapping })
   outputOptions(output, "show_mapping_ui", suspendWhenHidden = FALSE)
-  
-  output$show_patient_ui <- reactive({
-    !is.null(rv$processed_data) && nrow(rv$processed_data) > 0
-  })
+
+  output$show_patient_ui <- reactive({ !is.null(rv$processed_data) && nrow(rv$processed_data) > 0 })
   outputOptions(output, "show_patient_ui", suspendWhenHidden = FALSE)
   
   ##### 2.1.4. Data Uploading ######
@@ -604,187 +599,192 @@ server <- function(input, output, session) {
     rv$mdr_data <- NULL
     
     # Use shinybusy for progress indication
-    shiny::withProgress(message = 'Processing Data',
-                        value = 0,
-                        style = "notification",
-                        {
-                          tryCatch({
-                            incProgress(0.1, detail = "Validating inputs...")
-                            validate(
-                              need(input$PID != "", "Mapping Error: Select Patient ID."),
-                              need(input$SID != "", "Mapping Error: Select Sample ID."),
-                              need(input$Pathogen != "", "Mapping Error: Select Pathogen.")
-                            )
-                            if (input$data_structure == 'wide') {
-                              validate(need(
-                                length(input$AB_cols) > 0,
-                                "Mapping Error: Select Antibiotic columns for wide format."
-                              ))
-                            }
-                            else {
-                              validate(
-                                need(
-                                  input$AB_name != "",
-                                  "Mapping Error: Select Antibiotic Name column."
-                                ),
-                                need(
-                                  input$MIC != "" ||
-                                    input$Zone_Size != "",
-                                  "Mapping Error: Select MIC or Zone Size column."
-                                )
-                              )
-                            }
-                            
-                            incProgress(0.1, detail = "Preparing data columns...")
-                            
-                            core_map <- list(
-                              PatientID = input$PID,
-                              SampleID = input$SID,
-                              SampleDate = input$Sample_Date,
-                              SampleType = input$Sample_Type,
-                              Pathogen = input$Pathogen
-                            )
-                            core_map <- core_map[sapply(core_map, function(x)
-                              ! is.null(x) && x != "")]
-                            
-                            if (input$data_structure == 'wide') {
-                              df_processed <- rv$uploaded_data %>% select(all_of(unname(unlist(core_map))), all_of(input$AB_cols)) %>%
-                                tidyr::pivot_longer(
-                                  cols = all_of(input$AB_cols),
-                                  names_to = "Antibiotic_Name",
-                                  values_to = "Result",
-                                  values_drop_na = TRUE
-                                )
-                              
-                              colnames(df_processed) <- c(na.omit(names(core_map)[match(colnames(df_processed), unname(unlist(core_map)))]), "Antibiotic_Name", "Result")
-                              
-                              check_whonet_format <- df_processed %>% mutate(
-                                Method_init = str_split_i(Antibiotic_Name, "_|-", 2),
-                                Method = case_when(
-                                  grepl("\\bND", Method_init) ~ "Disk",
-                                  grepl("\\bNE", Method_init) ~ "E-Test",
-                                  grepl("\\bNM", Method_init) ~ "MIC"
-                                )
-                              )
-                              
-                              if (sum(grepl(
-                                "\\bDisk\\b|\\bE-Test|\\bMIC",
-                                unique(check_whonet_format$Method)
-                              )) == length(unique(check_whonet_format$Method)))
-                              {
-                                df_processed <- check_whonet_format %>%  mutate(
-                                  Antibiotic_Name_Temp = str_split_i(Antibiotic_Name, "_|-", 1),
-                                  Antibiotic_Name = Antibiotic_Name_Temp,
-                                  TempInterpretation = as.sir(str_extract(Result, "R|S|I|SSD|NI")),
-                                  Value = str_extract(Result, "(<=|>=|<|>)?\\s*[0-9.]+"),
-                                  MIC = if_else(Method %in% c("E-Test", "MIC"), Value, ""),
-                                  
-                                  Zone = if_else(Method == "Disk", Value, "")
-                                ) %>% select(-c(Result, Antibiotic_Name_Temp, Value, Method_init))
-                              } else {
-                                df_processed <- check_whonet_format %>%
-                                  mutate(
-                                    MIC = str_extract(Result, "(<=|>=|<|>)?\\s*[0-9.]+"),
-                                    Zone = "",
-                                    TempInterpretation = as.sir(str_extract(Result, "R|S|I|SSD|NI")),
-                                    Method = ""
-                                  ) %>%
-                                  select(-c(Result, Method_init))
-                              }
-                              
-                            } else {
-                              # long format
-                              long_map <- list(
-                                Antibiotic_Name = input$AB_name,
-                                MIC = input$MIC,
-                                Zone = input$Zone_Size,
-                                TempInterpretation = input$Interpretation,
-                                Method = input$Methods
-                              )
-                              long_map <- long_map[sapply(long_map, function(x)
-                                ! is.null(x) && x != "")]
-                              
-                              df_processed <- rv$uploaded_data %>% select(all_of(unname(unlist(core_map))), all_of(unname(unlist(long_map))))
-                              
-                              colnames(df_processed) <- c(na.omit(names(core_map)[match(colnames(df_processed), unname(unlist(core_map)))]), na.omit(names(long_map)[match(colnames(df_ast_part), unname(unlist(long_map)))]))
-                            }
-                            incProgress(0.2, detail = "Standardizing (AST)...")
-                            
-                            df_processed <- df_processed %>%
-                              mutate(
-                                mo_code = as.mo(Pathogen),
-                                kingdom = mo_kingdom(mo_code),
-                                gram_stain = mo_gramstain(mo_code),
-                                ab_code = as.ab(Antibiotic_Name),
-                                AntibioticName = ab_name(ab_code),
-                                MIC = as.mic(MIC),
-                                Zone = as.disk(Zone),
-                                Interpretation = case_when(
-                                  !is.na(MIC) & is.na(TempInterpretation) ~ as.sir(
-                                    MIC,
-                                    mo = mo_code,
-                                    ab = ab_code,
-                                    guideline = input$guideline
-                                  ),
-                                  !is.na(Zone) & is.na(TempInterpretation) ~ as.sir(
-                                    Zone,
-                                    mo = mo_code,
-                                    ab = ab_code,
-                                    guideline = input$guideline
-                                  ),!is.na(TempInterpretation) ~ as.sir(TempInterpretation)
-                                )
-                              ) %>%
-                              
-                              # --- Data Type Conversion & Cleaning ---
-                              if ("SampleDate" %in% names(df_processed)) {
-                                date_formats_to_try <- c(
-                                  "%Y-%m-%d",
-                                  "%d/%m/%Y",
-                                  "%m/%d/%Y",
-                                  "%d-%b-%y",
-                                  "%Y/%m/%d",
-                                  "%b %d %Y",
-                                  "%d-%b-%Y"
-                                ) # Expanded formats
-                                df_processed <- df_processed %>% mutate(
-                                  Sample_Date_Format = lubridate::parse_date_time2(SampleDate, orders = date_formats_to_try) %>% as.Date(),
-                                  Sample_Date_Final = if_else(
-                                    is.na(Sample_Date_Format),
-                                    as.Date(SampleDate, origin = "1900-01-01"),
-                                    Sample_Date_Format
-                                  ),
-                                  SampleDate = Sample_Date_Final
-                                ) %>%
-                                  select(-c(Sample_Date_Format, Sample_Date_Final))
-                              }
-                            incProgress(0.2, detail = "Calculating MDR status...")
-                            rv$mdr_data <- df_processed %>% tidyr::pivot_wider(
-                              id_cols = c(PatientID, SampleID, Pathogen, mo_code),
-                              names_from = ab_code,
-                              values_from = Interpretation
-                            ) %>% mutate(mdr = mdro(
-                              guideline = "CMI2012",
-                              pct_required_classes = 0.25
-                            ))
-                            
-                            # --- Store Processed Data ---
-                            incProgress(0.3, detail = "Finalizing...")
-                            rv$processed_data <- df_processed
-                            showNotification("Data processed successfully! Dashboard updated.",
-                                             type =
-                                               "message")
-                            
-                          }, error = function(e) {
-                            removeNotification("processing_msg")
-                            showNotification(
-                              paste("Error during processing:", e$message),
-                              type = "error",
-                              duration = 10
-                            )
-                            stop(e)
-                            rv$processed_data <- NULL
-                          })
-                        })
+    shiny::withProgress(message = 'Processing Data', value = 0, style = "notification", {
+    
+      tryCatch({
+        incProgress(0.1, detail = "Validating inputs...")
+        validate(
+          need(input$PID != "", "Mapping Error: Select Patient ID."),
+          need(input$SID != "", "Mapping Error: Select Sample ID."),
+          need(input$Pathogen != "", "Mapping Error: Select Pathogen.")
+        )
+        if (input$data_structure == 'wide') {
+          validate(need(
+            length(input$AB_cols) > 0,
+            "Mapping Error: Select Antibiotic columns for wide format."
+          ))
+        }
+        else {
+          validate(
+            need(
+              input$AB_name != "",
+              "Mapping Error: Select Antibiotic Name column."
+            ),
+            need(
+              input$MIC != "" ||
+                input$Zone_Size != "",
+              "Mapping Error: Select MIC or Zone Size column."
+            )
+          )
+        }
+        
+        incProgress(0.1, detail = "Preparing data columns...")
+        
+        core_map <- list(
+          PatientID = input$PID,
+          SampleID = input$SID,
+          SampleDate = input$Sample_Date,
+          SampleType = input$Sample_Type,
+          Pathogen = input$Pathogen
+        )
+        core_map <- core_map[sapply(core_map, function(x)
+          ! is.null(x) && x != "")]
+        
+        if (input$data_structure == 'wide') {
+          
+          
+          df_processed <- rv$uploaded_data %>% select(all_of(unname(unlist(core_map))), all_of(input$AB_cols)) %>%
+            tidyr::pivot_longer(
+              cols = all_of(input$AB_cols),
+              names_to = "Antibiotic_Name",
+              values_to = "Result",
+              values_drop_na = TRUE
+            )
+          
+          colnames(df_processed) <- c(na.omit(names(core_map)[match(colnames(df_processed), unname(unlist(core_map)))]), "Antibiotic_Name", "Result")
+          
+          check_whonet_format <- df_processed %>% mutate(Method_init = str_split_i(Antibiotic_Name,"_|-",2),
+                                                         Method = case_when(grepl("\\bND",Method_init) ~ "Disk",
+                                                                            grepl("\\bNE",Method_init) ~ "E-Test",
+                                                                            grepl("\\bNM",Method_init) ~ "Disk"
+                                                         ))
+          
+          if(sum(grepl("\\bND|\\bNM|\\bNE",unique(check_whonet_format$Method))) == length(unique(check_whonet_format$Method)))
+          {
+            df_processed_new <- check_whonet_format %>% select(names(core_map)) %>% unique()
+            for(i in unique(check_whonet_format$Method)){
+              temp <- check_whonet_format %>% filter(Method == i) %>% 
+                mutate(Antibiotic_Name_Temp = str_split_i(Antibiotic_Name,"_|-",1),
+                       Antibiotic_Name = Antibiotic_Name_Temp)
+              
+              temp <- temp %>% select(-c(Antibiotic_Name_Temp,Result))
+              df_processed_new <- left_join(df_processed_new,temp)
+            }
+          }
+          
+          
+          incProgress(0.1, detail = "Standardizing (AST)...")
+          df_processed <- df_processed %>% mutate(
+            mo_code = as.mo(Pathogen),
+            kingdom = mo_kingdom(mo_code),
+            gram_stain = mo_gramstain(mo_code),
+            ab_code = as.ab(Antibiotic_Name),
+            AntibioticName = ab_name(ab_code),
+            MIC = as.mic(str_extract(
+              Result, "(<=|>=|<|>)?\\s*[0-9.]+"
+            )),
+            TempInterpretation = as.sir(str_extract(Result, "R|S|I|SSD|NI")),
+            Interpretation = if_else(
+              !is.na(MIC) & is.na(TempInterpretation),
+              as.sir(
+                MIC,
+                mo = mo_code,
+                ab = ab_code,
+                guideline = input$guideline
+              ),
+              TempInterpretation
+            )
+          ) %>%
+            select(-c(TempInterpretation, Result, Antibiotic_Name))
+        } else {
+          # long format
+          long_map <- list(
+            Antibiotic_Name = input$AB_name,
+            MIC = input$MIC,
+            Zone = input$Zone_Size,
+            TempInterpretation = input$Interpretation,
+            Method = input$Methods
+          )
+          long_map <- long_map[sapply(long_map, function(x)
+            ! is.null(x) && x != "")]
+          
+          df_processed <- rv$uploaded_data %>% select(all_of(unname(unlist(core_map))), all_of(unname(unlist(long_map))))
+          
+          colnames(df_processed) <- c(na.omit(names(core_map)[match(colnames(df_processed), unname(unlist(core_map)))]), na.omit(names(long_map)[match(colnames(df_ast_part), unname(unlist(long_map)))]))
+          incProgress(0.1, detail = "Standardizing (AST)...")
+          df_processed <- df_processed %>%
+            mutate(
+              mo_code = as.mo(Pathogen),
+              kingdom = mo_kingdom(mo_code),
+              gram_stain = mo_gramstain(mo_code),
+              ab_code = as.ab(Antibiotic_Name),
+              AntibioticName = ab_name(ab_code),
+              MIC = as.mic(MIC),
+              Zone = as.disk(Zone),
+              Interpretation = case_when(
+                !is.na(MIC) & is.na(TempInterpretation) ~ as.sir(
+                  MIC,
+                  mo = mo_code,
+                  ab = ab_code,
+                  guideline = input$guideline
+                ),!is.na(Zone) & is.na(TempInterpretation) ~ as.sir(
+                  Zone,
+                  mo = mo_code,
+                  ab = ab_code,
+                  guideline = input$guideline
+                ),
+                as.sir(TempInterpretation)
+              )
+            ) %>%
+            select(-c(TempInterpretation, Antibiotic_Name))
+        }
+        
+        # --- Data Type Conversion & Cleaning ---
+        if ("SampleDate" %in% names(df_processed)) {
+          date_formats_to_try <- c(
+            "%Y-%m-%d",
+            "%d/%m/%Y",
+            "%m/%d/%Y",
+            "%d-%b-%y",
+            "%Y/%m/%d",
+            "%b %d %Y",
+            "%d-%b-%Y"
+          ) # Expanded formats
+          df_processed <- df_processed %>% mutate(
+            Sample_Date_Format = lubridate::parse_date_time2(SampleDate, orders = date_formats_to_try) %>% as.Date(),
+            Sample_Date_Final = if_else(
+              is.na(Sample_Date_Format),
+              as.Date(SampleDate, origin = "1900-01-01"),
+              Sample_Date_Format
+            ),
+            SampleDate = Sample_Date_Final
+          ) %>%
+            select(-c(Sample_Date_Format, Sample_Date_Final))
+        }
+        incProgress(0.3, detail = "Calculating MDR status...")
+        rv$mdr_data <- df_processed %>% tidyr::pivot_wider(
+          id_cols = c(PatientID, SampleID, Pathogen, mo_code),
+          names_from = ab_code,
+          values_from = Interpretation
+        ) %>% mutate(mdr = mdro(guideline = "CMI2012", pct_required_classes = 0.25))
+        
+        # --- Store Processed Data ---
+        incProgress(0.4, detail = "Finalizing...")
+        rv$processed_data <- df_processed
+        showNotification("Data processed successfully! Dashboard updated.", type =
+                           "message")
+        
+      }, error = function(e) {
+        removeNotification("processing_msg")
+        showNotification(
+          paste("Error during processing:", e$message),
+          type = "error",
+          duration = 10
+        )
+        stop(e)
+        rv$processed_data <- NULL
+      })
+    })
   })
   
   
@@ -814,49 +814,25 @@ server <- function(input, output, session) {
   })
   
   # Update filter choices reactively
-  observe({
-    updateVirtualSelect(
-      session = session,
-      inputId = "PID_show",
-      choices = patient_ids(),
-      selected = ifelse(length(patient_ids()) > 0, patient_ids()[1], "")
-    )
-  })
-  observe({
-    updateVirtualSelect(
-      session = session,
-      inputId = "SID_show",
-      choices = sample_ids(),
-      selected = ifelse(length(sample_ids()) > 0, sample_ids()[1], "")
-    )
-  })
-  observe({
-    updateVirtualSelect(
-      session = session,
-      inputId = "Pathogen_show",
-      choices = pathogen_names(),
-      selected = ifelse(length(pathogen_names()) > 0, pathogen_names()[1], "")
-    )
-  })
+  observe({ updateVirtualSelect(session = session,
+                                inputId = "PID_show", choices = patient_ids(), selected = ifelse(length(patient_ids())>0, patient_ids()[1], "")) })
+  observe({ updateVirtualSelect(session = session,
+                                inputId = "SID_show", choices = sample_ids(), selected = ifelse(length(sample_ids())>0, sample_ids()[1], "")) })
+  observe({ updateVirtualSelect(session = session,
+                                inputId = "Pathogen_show", choices = pathogen_names(), selected = ifelse(length(pathogen_names())>0, pathogen_names()[1], "")) })
   
   filtered_review_data <- reactive({
-    req(rv$processed_data,
-        input$PID_show,
-        input$SID_show,
-        input$Pathogen_show)
+    req(rv$processed_data, input$PID_show, input$SID_show, input$Pathogen_show)
     rv$processed_data %>%
       filter(
         PatientID == input$PID_show &
-          SampleID == input$SID_show &
-          Pathogen == input$Pathogen_show
+        SampleID == input$SID_show &
+        Pathogen == input$Pathogen_show
       )
   })
   
   mdr_review_data <- reactive({
-    req(rv$mdr_data,
-        input$PID_show,
-        input$SID_show,
-        input$Pathogen_show)
+    req(rv$mdr_data, input$PID_show, input$SID_show, input$Pathogen_show)
     rv$mdr_data %>%
       filter(
         PatientID == input$PID_show &
@@ -871,8 +847,7 @@ server <- function(input, output, session) {
     
     if ("SampleDate" %in% names(data_sub)) {
       unique_dates <- unique(data_sub$SampleDate)
-      paste("Date Sample Collected:", paste(format(unique_dates, "%d-%m-%Y"), collapse =
-                                              ", "))
+      paste("Date Sample Collected:", paste(format(unique_dates, "%d-%m-%Y"), collapse=", "))
     } else {
       "Date Sample Collected: Not Available"
     }
@@ -884,7 +859,7 @@ server <- function(input, output, session) {
     # Check if SampleType column exists after processing
     if ("SampleType" %in% names(data_sub)) {
       unique_types <- unique(data_sub$SampleType)
-      paste("Sample Type:", paste(unique_types, collapse = ", "))
+      paste("Sample Type:", paste(unique_types, collapse=", "))
     } else {
       "Sample Type: Not Available"
     }
@@ -892,32 +867,28 @@ server <- function(input, output, session) {
   
   output$Kingdom_text <- renderText({
     data_sub <- filtered_review_data()
-    validate(need(nrow(data_sub) > 0, ""))
+    validate(need(nrow(data_sub) > 0, "")) 
     unique_types <- unique(data_sub$kingdom)
-    paste("Kingdom:", paste(unique_types, collapse = ", "))
+    paste("Kingdom:", paste(unique_types, collapse=", "))
   })
   
   output$GramStain_text <- renderText({
     data_sub <- filtered_review_data()
-    validate(need(nrow(data_sub) > 0, ""))
+    validate(need(nrow(data_sub) > 0, "")) 
     unique_types <- unique(data_sub$gram_stain)
-    paste("Gram stain:", paste(unique_types, collapse = ", "))
+    paste("Gram stain:", paste(unique_types, collapse=", "))
   })
   
   output$MDR_text <- renderText({
     data_sub <- mdr_review_data()
-    validate(need(nrow(data_sub) > 0, ""))
+    validate(need(nrow(data_sub) > 0, "")) 
     unique_types <- unique(data_sub$mdr)
-    paste("MDR Status (CMI2012):", paste(unique_types, collapse = ", "))
+    paste("MDR Status (CMI2012):", paste(unique_types, collapse=", "))
   })
   
   output$AST_data_view_table <- DT::renderDataTable({
     data_sub <- filtered_review_data()
-    cols_AST <- c("AntibioticName",
-                  "MIC",
-                  "Zone",
-                  "Interpretation",
-                  "Menthod")
+    cols_AST <- c("AntibioticName", "MIC", "Zone", "Interpretation", "Menthod")
     data_sub <- data_sub %>% select(any_of(cols_AST))
     datatable(
       data_sub,
@@ -928,9 +899,7 @@ server <- function(input, output, session) {
         searching = FALSE,
         lengthChange = FALSE,
         autoWidth = TRUE,
-        columnDefs = list(list(
-          className = 'dt-center', targets = '_all'
-        ))
+        columnDefs = list(list(className = 'dt-center', targets = '_all'))
       ),
       rownames = FALSE,
       filter = 'top'
@@ -945,7 +914,7 @@ server <- function(input, output, session) {
       paste0("processed__all_data_", Sys.Date(), ".xlsx")
     },
     content = function(file) {
-      req(rv$processed_data, rv$mdr_data) # Need processed data
+      req(rv$processed_data,rv$mdr_data) # Need processed data
       
       data_processed_to_download <- rv$processed_data
       data_mdr_to_download <- rv$mdr_data
@@ -954,8 +923,8 @@ server <- function(input, output, session) {
       addWorksheet(wb, "Processed Data")
       addWorksheet(wb, "MDR Data")
       
-      writeData(wb, 1, data_processed_to_download)
-      writeData(wb, 2, data_mdr_to_download)
+      writeData(wb,1,data_processed_to_download)
+      writeData(wb,2,data_mdr_to_download)
       saveWorkbook(wb, file)
     }
   )
@@ -987,7 +956,9 @@ server <- function(input, output, session) {
   
   ###### 2.1.7. Main Content Area Preview ######
   output$raw_data_view_table <- DT::renderDataTable({
-    validate(need(rv$uploaded_data, ))
+    validate(need(
+      rv$uploaded_data,
+    ))
     datatable(
       rv$uploaded_data,
       options = list(
