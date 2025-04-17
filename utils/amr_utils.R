@@ -179,17 +179,28 @@ select_antibiotic2group <- function(label, groups){
 
 add_group_antibiotic <- function(gt_table, list_ab)
 {
+<<<<<<< HEAD
+  groups_ab <- ab_group(list_ab)
+  ab_data <- data.frame(list_ab,groups_ab)
+=======
   names_ab <- format_antibiotic_label(list_ab)
   groups_ab <- ab_group(names_ab)
   ab_data <- data.frame(names_ab,groups_ab)
+>>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
   for (i in sort(unique(groups_ab),decreasing = TRUE))
   {
     sub_ab <- ab_data %>% filter(groups_ab == i)
     gt_table <- gt_table %>%
+<<<<<<< HEAD
+      tab_row_group(label = i, row = label %in% sub_ab$list_ab)
+  }
+  gt_table
+=======
       tab_row_group(label = i, row = label %in% sub_ab$names_ab)
   }
   gt_table %>%
     tab_style(style = cell_text(weight = "bold"), locations = cells_row_groups())
+>>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
 }
 
 binary2gene <- function(x, n, list_gen)
