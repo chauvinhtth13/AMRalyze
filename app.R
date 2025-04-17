@@ -903,13 +903,9 @@ server <- function(input, output, session) {
         ready_for_upload = FALSE
       )
     }
-  })
+  }) 
   
-<<<<<<< HEAD
   ##### 2.1.3 Conditional UI Logic #####
-=======
-  ##### 2.1.3. Conditional UI Logic #####
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
   output$show_sheet_selector <- reactive({
     !is.null(rv$file_info$ext) && rv$file_info$ext == "xlsx"
   })
