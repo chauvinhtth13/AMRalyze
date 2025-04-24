@@ -80,10 +80,10 @@ ui <- page_navbar(
     )
   )),
   ##### 1.1. Dashboard Tab #####
-<<<<<<< HEAD
+
   ##### 1.1.1 Summary Upload Data ######
-=======
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
+
   nav_panel(
     title = "Dashboard",
     layout_columns(
@@ -115,34 +115,34 @@ ui <- page_navbar(
     ),
     ##### 1.1.2 Chart Summary Pathogen #####
     card(
-<<<<<<< HEAD
+
       min_height = "600px",
       max_height = "600px",
-=======
+
       min_height = "500px",
       max_height = "500px",
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
       card_header("Summary Pathogen"),
       card_body(
         fill = TRUE,
         plotlyOutput("pathogen_summary_plot", width = "100%", height = "500px")
       )
     ),
-<<<<<<< HEAD
+
     ##### 1.1.3 AMR Pattern ####
     card(
       min_height = "1200px",
       max_height = "1200px",
-=======
+
     card(
       min_height = "1000px",
       max_height = "1000px",
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
       card_header(" Antimicrobial resistance patterns"),
       navset_card_tab(
         id = "ast_card_tabs",
         
-<<<<<<< HEAD
+
         ##### 1.1.3.1 Gram-negative #####
         nav_panel(title = "Gram-Negative", layout_sidebar(
           sidebar = sidebar(
@@ -274,7 +274,7 @@ ui <- page_navbar(
     ),
   ),
   
-=======
+
         # --- Tab 1: Overview Table ---
         nav_panel(title = "Gram-Negative",
                   layout_sidebar(
@@ -314,7 +314,7 @@ ui <- page_navbar(
       )
     )
   ), 
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
   
   ##### 1.2. Input Tab #####
   nav_panel(title = "Input", ##### 1.2.1 Sidebar Configure #####
@@ -472,11 +472,11 @@ ui <- page_navbar(
                   actionButton("btn_process", "Process Data", class = "btn-success w-100")
                 ),
               ),
-<<<<<<< HEAD
+
               ##### 1.2.2 Main Content Area #####
-=======
+
             ##### 1.2.2. Main Content Area #####
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
               card(
                 card_header("Processed Data Review"),
                 card_body(
@@ -945,16 +945,16 @@ server <- function(input, output, session) {
         df_read <- readxl::read_excel(path, sheet = sheet)
       }
       else {
-<<<<<<< HEAD
+
         df_read <- data.table::fread(
           path,
           stringsAsFactors = FALSE,
           header = TRUE,
           check.names = FALSE
         )
-=======
+
         df_read <- data.table::fread(path, stringsAsFactors = FALSE, header = TRUE, check.names = FALSE)
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
         df_read <- as.data.frame(df_read)
       }
       if (is.null(df_read) ||
@@ -1146,14 +1146,14 @@ server <- function(input, output, session) {
                               ! is.null(x) && x != "")]
                             
                             if (input$data_structure == 'wide') {
-<<<<<<< HEAD
+
                               df_processed <- rv$uploaded_data %>% select(all_of(unname(unlist(core_map))), all_of(input$AB_cols)) %>%
                                 mutate_at(all_of(input$AB_cols), as.character) %>%
-=======
+
                               
                               df_processed <- rv$uploaded_data %>% select(all_of(unname(unlist(core_map))), all_of(input$AB_cols)) %>%
                                 mutate_at(all_of(input$AB_cols), as.character)%>%
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
                                 tidyr::pivot_longer(
                                   cols = all_of(input$AB_cols),
                                   names_to = "Antibiotic_Name",
@@ -1166,7 +1166,7 @@ server <- function(input, output, session) {
                               check_whonet_format <- df_processed %>% mutate(
                                 Method_init = str_split_i(Antibiotic_Name, "_|-", 2),
                                 Method = case_when(
-<<<<<<< HEAD
+
                                   grepl("ND", Method_init) ~ "Disk",
                                   grepl("NE", Method_init) ~ "E-Test",
                                   grepl("NM", Method_init) ~ "MIC"
@@ -1174,7 +1174,7 @@ server <- function(input, output, session) {
                               )
                               if (sum(grepl(
                                 "Disk|E-Test|MIC",
-=======
+
                                   grepl("\\bND", Method_init) ~ "Disk",
                                   grepl("\\bNE", Method_init) ~ "E-Test",
                                   grepl("\\bNM", Method_init) ~ "MIC"
@@ -1182,7 +1182,7 @@ server <- function(input, output, session) {
                               )
                               if (sum(grepl(
                                 "\\bDisk\\b|\\bE-Test|\\bMIC",
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
                                 unique(check_whonet_format$Method)
                               )) == length(unique(check_whonet_format$Method)))
                               {
@@ -1192,10 +1192,10 @@ server <- function(input, output, session) {
                                   TempInterpretation = as.sir(str_extract(Result, "R|S|I|SSD|NI")),
                                   Value = str_extract(Result, "(<=|>=|<|>)?\\s*[0-9.]+"),
                                   MIC = if_else(Method %in% c("E-Test", "MIC"), Value, ""),
-<<<<<<< HEAD
-=======
+
+
                                   
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
                                   Zone = if_else(Method == "Disk", Value, "")
                                 ) %>% select(-c(Result, Antibiotic_Name_Temp, Value, Method_init))
                               } else {
@@ -1227,7 +1227,7 @@ server <- function(input, output, session) {
                             
                             incProgress(0.1, detail = "Standardizing (AST)...")
                             
-<<<<<<< HEAD
+
                             if (!"TempInterpretation" %in% names(df_processed)) {
                               df_processed$TempInterpretation <- as.sir("")
                             }
@@ -1235,7 +1235,7 @@ server <- function(input, output, session) {
                               df_processed$Zone <- as.disk("")
                             }
                             if (!"MIC" %in% names(df_processed)) {
-=======
+
                             if (! "TempInterpretation" %in% names(df_processed)) {
                               df_processed$TempInterpretation <- as.sir("")
                             }
@@ -1243,7 +1243,7 @@ server <- function(input, output, session) {
                               df_processed$Zone <- as.disk("")
                             }
                             if (! "MIC" %in% names(df_processed)) {
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
                               df_processed$MIC <- as.mic("")
                             }
                             
@@ -1263,7 +1263,7 @@ server <- function(input, output, session) {
                                     ab = ab_code,
                                     guideline = input$guideline
                                   ),
-<<<<<<< HEAD
+
                                   !is.na(Zone) &
                                     is.na(TempInterpretation) ~ as.sir(
                                       Zone,
@@ -1326,7 +1326,7 @@ server <- function(input, output, session) {
                               ) %>%
                                 select(-c(SampleDate_chr, Sample_Date_Parsed))
                             }
-=======
+
                                   !is.na(Zone) & is.na(TempInterpretation) ~ as.sir(
                                     Zone,
                                     mo = mo_code,
@@ -1364,12 +1364,12 @@ server <- function(input, output, session) {
                                 ) %>%
                                   select(-c(SampleDate_chr, Sample_Date_Parsed))
                               }
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
                             
                             incProgress(0.3, detail = "Calculating MDR status...")
                             mdr_mic_data <- df_processed %>% filter(!is.na(MIC)) %>%
                               tidyr::pivot_wider(
-<<<<<<< HEAD
+
                                 id_cols = c(
                                   PatientID,
                                   SampleID,
@@ -1378,14 +1378,14 @@ server <- function(input, output, session) {
                                   kingdom,
                                   gram_stain
                                 ),
-=======
+
                                 id_cols = c(PatientID, SampleID, Pathogen, mo_code, kingdom, gram_stain),
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
                                 names_from = ab_code,
                                 values_from = Interpretation
                               )
                             
-<<<<<<< HEAD
+
                             mdr_zone_data <- df_processed %>% filter(!is.na(Zone) |
                                                                        (is.na(Zone) &
                                                                           is.na(MIC))) %>%
@@ -1398,11 +1398,11 @@ server <- function(input, output, session) {
                                   kingdom,
                                   gram_stain
                                 ),
-=======
+
                             mdr_zone_data <- df_processed %>% filter(!is.na(Zone) |(is.na(Zone) & is.na(MIC))) %>%
                               tidyr::pivot_wider(
                                 id_cols = c(PatientID, SampleID, Pathogen, mo_code, kingdom, gram_stain),
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
                                 names_from = ab_code,
                                 values_from = Interpretation
                               )
@@ -1412,7 +1412,7 @@ server <- function(input, output, session) {
                             
                             
                             common_cols <- intersect(names(mdr_mic_data), names(mdr_zone_data))
-<<<<<<< HEAD
+
                             ab_common_cols <- setdiff(
                               common_cols,
                               c(
@@ -1424,14 +1424,14 @@ server <- function(input, output, session) {
                                 "gram_stain"
                               )
                             )
-=======
+
                             ab_common_cols <- setdiff(common_cols, c("PatientID", "SampleID", "Pathogen", "mo_code", "kingdom", "gram_stain"))
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
                             
                             mdr_ab_common_data <- full_join(
                               mdr_mic_data,
                               mdr_zone_data,
-<<<<<<< HEAD
+
                               by = c(
                                 "PatientID",
                                 "SampleID",
@@ -1440,9 +1440,9 @@ server <- function(input, output, session) {
                                 "kingdom",
                                 "gram_stain"
                               ),
-=======
+
                               by = c("PatientID", "SampleID", "Pathogen", "mo_code", "kingdom", "gram_stain"),
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
                               suffix = c(".mic", ".zone")
                             )
                             
@@ -1460,7 +1460,7 @@ server <- function(input, output, session) {
                                 all_of(mic_only_cols),
                                 all_of(zone_only_cols),
                               )) %>%
-<<<<<<< HEAD
+
                               mutate(
                                 MDR = mdro(
                                   guideline = "CMI2012",
@@ -1468,10 +1468,10 @@ server <- function(input, output, session) {
                                 ),
                                 MDR = if_else(is.na(MDR), "Not Determined", MDR)
                               )
-=======
+
                               mutate(MDR = mdro(guideline = "CMI2012", pct_required_classes = 0.2),
                                      MDR = if_else(is.na(MDR), "Not Determined", MDR))
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
                             
                             # --- Store Processed Data ---
                             incProgress(0.4, detail = "Finalizing...")
@@ -1611,17 +1611,17 @@ server <- function(input, output, session) {
   output$MDR_text <- renderText({
     data_sub <- mdr_review_data()
     validate(need(nrow(data_sub) > 0, ""))
-<<<<<<< HEAD
+
     unique_types <- unique(data_sub$MDR)
-=======
+
     unique_types <- unique(data_sub$mdr)
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
     paste("MDR Status (CMI2012):", unique_types)
   })
   
   output$AST_data_view_table <- DT::renderDataTable({
     data_sub <- filtered_review_data()
-<<<<<<< HEAD
+
     data_sub <- data_sub %>% select(c(ab_code, AntibioticName, MIC, Zone, Interpretation, Method)) %>%
       mutate(ab_code = as.character(ab_code)) %>% filter(!(is.na(MIC) &
                                                              is.na(Zone) &
@@ -1634,11 +1634,11 @@ server <- function(input, output, session) {
       "Interpretation",
       "Method"
     )
-=======
+
     data_sub <- data_sub %>% select(c(ab_code, AntibioticName, MIC, Zone, Interpretation, Method)) %>% 
       mutate(ab_code = as.character(ab_code)) %>% filter(!(is.na(MIC) & is.na(Zone) & is.na(Interpretation)))
     names(data_sub) <- c("Antibiotic Code", "Antibiotic Name", "MIC (mg/L)", "Zone Size (mm)", "Interpretation", "Method")
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
     datatable(
       data_sub,
       options = list(
@@ -1700,13 +1700,13 @@ server <- function(input, output, session) {
       scales::comma(n_distinct(df$SampleID, na.rm = TRUE))
   })
   
-<<<<<<< HEAD
+
   ##### 2.1.7 Main Content Area Preview ######
   ##### 2.1.7.1 Chart Summary Pathogen #####
-=======
+
   ###### 2.1.7. Main Content Area Preview ######
 
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
   
   output$pathogen_summary_plot <- renderPlotly({
     # Require processed data
@@ -1758,11 +1758,11 @@ server <- function(input, output, session) {
       ) +
       # Add frequency labels to the bars
       geom_text(
-<<<<<<< HEAD
+
         aes(label = scales::comma(Frequency), y = Frequency * 1.08),
-=======
+
         aes(label = scales::comma(Frequency), y = Frequency*1.05),
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
         hjust = -0.2,
         size = 5,
         color = "black"
@@ -1772,8 +1772,8 @@ server <- function(input, output, session) {
     ggplotly(gg)
     
   })
-<<<<<<< HEAD
-=======
+
+
   
   observe({
     
@@ -1840,7 +1840,7 @@ server <- function(input, output, session) {
     return(gt_sub)
   })
   
->>>>>>> d693b788385041cb3bb8d8727ffefdf60c479ec8
+
   
   ##### 2.1.7.2 AMR Pattern #####
   ##### 2.1.7.2.1 Gram-Negative #####
