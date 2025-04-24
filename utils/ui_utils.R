@@ -1,3 +1,65 @@
+css_function <- function() {
+  tags$head(
+    shinyjs::useShinyjs(),
+    tags$style(HTML("#file_browse_progress.progress { display: none !important; }")),
+    tags$script(HTML(
+      # JavaScript for enabling Shift+Click range selection in VirtualSelect input 'AB_cols'
+      "$(document).on('shiny:connected', function(event) {
+         var vsInputId = 'AB_cols';
+         var lastSelectedIndex = -1;
+         var virtualSelectElement = document.getElementById(vsInputId);
+
+         if (virtualSelectElement && virtualSelectElement.virtualSelect) {
+             $(virtualSelectElement).on('click', '.vscomp-option', function(e) {
+                 var clickedOption = $(this);
+                 var currentIndex = clickedOption.data('index');
+                 // console.log('Clicked index:', currentIndex, 'Shift:', e.shiftKey, 'Last:', lastSelectedIndex);
+
+                 if (e.shiftKey && lastSelectedIndex !== -1) {
+                     e.preventDefault(); // Prevent default toggle behaviour
+                     var start = Math.min(lastSelectedIndex, currentIndex);
+                     var end = Math.max(lastSelectedIndex, currentIndex);
+                     var optionsToSelect = [];
+                     var currentValues = virtualSelectElement.virtualSelect.getSelectedValue(); // Get already selected values
+
+                     // Iterate through visible options to find those in the range
+                     $(virtualSelectElement).find('.vscomp-option').each(function() {
+                         var idx = $(this).data('index');
+                         var val = $(this).data('value');
+                         if (idx >= start && idx <= end) {
+                            // Add to selection (avoid duplicates if already selected)
+                            if (!optionsToSelect.includes(val)) {
+                                optionsToSelect.push(val);
+                            }
+                         }
+                     });
+
+                     // Combine newly selected range with previously selected items OUTSIDE the range
+                     // This mimics standard shift-click behaviour (adds range to existing selection)
+                     var finalSelection = Array.from(new Set([...currentValues, ...optionsToSelect]));
+
+                     // Use VirtualSelect API to set the value
+                     virtualSelectElement.virtualSelect.setValue(finalSelection);
+                     // console.log('Range selected:', optionsToSelect, 'Final Selection:', finalSelection);
+
+                     // Update lastSelectedIndex to the end of the range clicked
+                     lastSelectedIndex = currentIndex;
+
+                 } else {
+                     // Regular click (not shift or first click) - update last selected index
+                     lastSelectedIndex = currentIndex;
+                 }
+             });
+         } else {
+             console.error('Could not find Virtual Select instance for:', vsInputId);
+         }
+     });"
+    ))
+  )
+}
+
+
+
 detect_column <- function(original_headers, patterns) {
 
   # Store original headers to return the correct value later
