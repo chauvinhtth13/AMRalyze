@@ -1,0 +1,52 @@
+/* Hide progress bar under file input */
+#file_browse_progress.progress {
+  display: none !important;
+}
+
+/* Optional: Value box style improvements */
+.value-box {
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+  font-size: 1.1rem;
+}
+
+/* Dashboard card padding and margin */
+.card-header {
+  font-weight: bold;
+  font-size: 1.15rem;
+  padding: 0.75rem 1rem;
+}
+
+.card-body {
+  padding: 1rem;
+}
+
+/* Button spacing */
+.btn {
+  margin-top: 10px;
+}
+
+/* Improve spacing for filter columns */
+.vscomp-wrapper {
+  margin-bottom: 10px;
+}
+
+.step-header { 
+        color: #0d6efd; 
+        font-weight: bold; 
+        margin-top: 20px; 
+        margin-bottom: 10px; 
+      }
+      .info-text { 
+        color: #6c757d; 
+        font-size: 0.9em; 
+        margin-bottom: 15px; 
+      }
+      .required-field::after { 
+        content: ' *'; 
+        color: red; 
+      }
+      .success-message { 
+        color: #198754; 
+        font-weight: bold; 
+      }
