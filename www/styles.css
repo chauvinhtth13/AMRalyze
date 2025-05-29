@@ -1,16 +1,50 @@
-/* Hide progress bar under file input */
+/* === File Input Customization === */
 #file_browse_progress.progress {
   display: none !important;
 }
 
-/* Optional: Value box style improvements */
-.value-box {
-  border-radius: 12px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
-  font-size: 1.1rem;
+/* === Value Box Styling === */
+.custom-records {
+  background-color: #D6E4FF !important;
+  color: #003E8A !important;
 }
 
-/* Dashboard card padding and margin */
+.custom-patients {
+  background-color: #D3F9E8 !important;
+  color: #096C5F !important;
+}
+
+.custom-samples {
+  background-color: #FFE5D0 !important;
+  color: #A14C00 !important;
+}
+
+.custom-timelines {
+  background-color: #EAD7FF !important;
+  color: #4B2C82 !important;
+}
+
+
+/* Hover animation for modern style */
+.value-box-modern {
+  transition: transform 0.2s ease;
+  cursor: pointer;
+}
+
+.value-box-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* === Cards Styling === */
+.card {
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
 .card-header {
   font-weight: bold;
   font-size: 1.15rem;
@@ -21,32 +55,85 @@
   padding: 1rem;
 }
 
-/* Button spacing */
+/* === Buttons === */
 .btn {
   margin-top: 10px;
 }
 
-/* Improve spacing for filter columns */
+/* === Form Enhancements === */
 .vscomp-wrapper {
   margin-bottom: 10px;
 }
 
-.step-header { 
-        color: #0d6efd; 
-        font-weight: bold; 
-        margin-top: 20px; 
-        margin-bottom: 10px; 
-      }
-      .info-text { 
-        color: #6c757d; 
-        font-size: 0.9em; 
-        margin-bottom: 15px; 
-      }
-      .required-field::after { 
-        content: ' *'; 
-        color: red; 
-      }
-      .success-message { 
-        color: #198754; 
-        font-weight: bold; 
-      }
+.step-header {
+  color: #0d6efd;
+  font-weight: bold;
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+.info-text {
+  color: #6c757d;
+  font-size: 0.9em;
+  margin-bottom: 15px;
+}
+
+.required-field::after {
+  content: ' *';
+  color: red;
+}
+
+.success-message {
+  color: #198754;
+  font-weight: bold;
+}
+
+/* === Layout Containers === */
+.dashboard-container {
+  padding: 15px;
+}
+
+.summary-section {
+  margin-bottom: 25px;
+}
+
+.chart-container {
+  min-height: 400px;
+}
+
+.resistance-section {
+  margin-top: 20px;
+}
+
+.stats-box {
+  font-size: 0.9rem;
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+/* === Sidebar and Navbar === */
+.sidebar {
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.navbar-brand {
+  font-weight: 600;
+}
+
+/* === Responsive Design === */
+@media (max-width: 768px) {
+  .layout-sidebar {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100% !important;
+    margin-bottom: 1rem;
+  }
+
+  .chart-container {
+    min-height: 300px;
+  }
+}
