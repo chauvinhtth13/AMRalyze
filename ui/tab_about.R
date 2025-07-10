@@ -43,6 +43,14 @@ tab_about <- function() {
           tags$th("Name Antibiotic / Code Antibiotic (WHONET Format)")
         )
       )),
+      h5("WHONET Antimicrobial Codes"),
+      tags$ul(tags$li(
+        tags$a(
+          href = "https://whonet.org/WebDocs/WHONET_Antimicrobial_Codes.pdf",
+          target = "_blank",
+          "https://whonet.org/WebDocs/WHONET_Antimicrobial_Codes.pdf"
+        )
+      )), 
       h5("Antibiotic Column Interpretation"),
       tags$ul(
         tags$li(
@@ -53,7 +61,7 @@ tab_about <- function() {
         tags$li(tags$code("*_ND"), ": Zone size (disk diffusion diameter)."),
         tags$li(
           tags$code("[no suffix]"),
-          ": Treated as MIC; if the value is formatted like 'R:<=...', displays interpretation (S/I/R) and the corresponding MIC."
+          ": Treated as MIC value; if the value is formatted like 'R:<=...', displays interpretation (S/I/R) and the corresponding MIC."
         )
       ),
       h4("Key Features"),

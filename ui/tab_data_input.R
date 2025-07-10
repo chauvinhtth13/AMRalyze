@@ -1,3 +1,5 @@
+source("ui/card_data_preview.R", local = TRUE)
+
 tab_data_input <- function() {
   nav_panel(
     title = "Data Input",
@@ -17,8 +19,6 @@ tab_data_input <- function() {
           "file_browse",
           NULL,
           accept = c(
-            ".csv",
-            ".xlsx",
             "text/csv",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           ),
@@ -26,28 +26,21 @@ tab_data_input <- function() {
           placeholder = "No file selected (Max 10MB)"
         ),
         
-        # Sheet selector for Excel files
-        conditionalPanel(
-          "output.show_sheet_selector == true",
-          selectInput("sheet_name", "Select Excel Sheet:", choices = NULL)
-        ),
+        uiOutput("sheet_selector"),
         
         # Upload button
-        conditionalPanel(
-          "output.show_upload_button == true",
-          actionButton(
-            "btn_upload",
-            "Upload Data",
-            class = "btn-primary w-100",
-            icon = icon("eye")
-          )
+        actionButton(
+          "btn_upload",
+          "Upload Data",
+          class = "btn-primary w-100",
+          icon = icon("eye")
         ),
         
         hr(),
         
         ##### Step 2: Configure Analysis #####
         h5("Step 2: Analysis Configuration", class = "step-header"),
-
+        
         virtualSelectInput(
           "guideline",
           tags$strong("Clinical breakpoint guidelines"),
@@ -58,7 +51,9 @@ tab_data_input <- function() {
           placeholder = "Select row number or record index column"
         ),
         
-        p(tags$strong("Multi-Drug Resistant Calculated", class = "required-field")),
+        p(
+          tags$strong("Multi-Drug Resistant Calculated", class = "required-field")
+        ),
         radioButtons(
           inputId = "MDR_cal",
           label = NULL,
@@ -70,106 +65,104 @@ tab_data_input <- function() {
         hr(),
         
         ##### Step 3: Column Mapping #####
-        conditionalPanel(
-          condition = "output.show_mapping_ui == true",
-          h5("Step 3: Column Mapping", class = "step-header"),
-          p(
-            "Assign the appropriate columns from your uploaded dataset to the required fields below. Fields marked with * are mandatory.",
-            class = "info-text"
-          ),
-          
-          h6("Select at least one identifier column", style = "color: #0d6efd; font-weight: bold;"),
-          
-          virtualSelectInput(
-            "No",
-            tags$strong("No. Column"),
-            choices = NULL,
-            multiple = FALSE,
-            search = TRUE,
-            placeholder = "Select row number or record index column"
-          ),
-          
-          virtualSelectInput(
-            "PID",
-            tags$strong("Patient ID Column"),
-            choices = NULL,
-            multiple = FALSE,
-            search = TRUE,
-            placeholder = "Select column containing patient ID"
-          ),
-          
-          virtualSelectInput(
-            "SID",
-            tags$strong("Sample ID Column"),
-            choices = NULL,
-            multiple = FALSE,
-            search = TRUE,
-            placeholder = "Select column containing sample ID"
-          ),
-          
-          h6("Select sample metadata fields", style = "color: #0d6efd; font-weight: bold;"),
-          
-          p(
-            "Please ensure you select the Organism/Pathogen column below. This is a required field for downstream analysis.",
-            class = "info-text"
-          ),
-          
-          virtualSelectInput(
-            "Sample_Date",
-            tags$strong("Sampling Date Column"),
-            choices = NULL,
-            multiple = FALSE,
-            search = TRUE,
-            showValueAsTags = TRUE,
-            hideClearButton = FALSE,
-            placeholder = "Select sampling date column (optional)"
-          ),
-          
-          virtualSelectInput(
-            "Sample_Type",
-            tags$strong("Sample Type Column"),
-            choices = NULL,
-            multiple = FALSE,
-            search = TRUE,
-            showValueAsTags = TRUE,
-            hideClearButton = FALSE,
-            placeholder = "Select specimen type column (optional)"
-          ),
-          
-          virtualSelectInput(
-            "Pathogen",
-            tags$strong("Organism/Pathogen Column *"),
-            choices = NULL,
-            multiple = FALSE,
-            search = TRUE,
-            placeholder = "Select column containing pathogen or organism name"
-          ),
-          
-          h6("Antibiotic Susceptibility Test (AST) Results", style = "color: #0d6efd; font-weight: bold;"),
-          
-          virtualSelectInput(
-            "AB_cols",
-            NULL,
-            choices = NULL,
-            multiple = TRUE,
-            search = TRUE,
-            showValueAsTags = TRUE,
-            placeholder = "Select all columns containing antibiotic test results",
-            disableSelectAll = FALSE,
-            optionsCount = 12
-          ),
-          
-          hr(),
-          
-          actionButton(
-            "btn_process",
-            "Process Data",
-            class = "btn-success w-100",
-            style = "height: 50px; font-size: 16px;",
-            icon = icon("cogs")
-          )
+        h5("Step 3: Column Mapping", class = "step-header"),
+        p(
+          "Assign the appropriate columns from your uploaded dataset to the required fields below. Fields marked with * are mandatory.",
+          class = "info-text"
+        ),
+        
+        h6("Select at least one identifier column", style = "color: #0d6efd; font-weight: bold;"),
+        
+        virtualSelectInput(
+          "No",
+          tags$strong("No. Column"),
+          choices = NULL,
+          multiple = FALSE,
+          search = TRUE,
+          placeholder = "Select row number or record index column"
+        ),
+        
+        virtualSelectInput(
+          "PID",
+          tags$strong("Patient ID Column"),
+          choices = NULL,
+          multiple = FALSE,
+          search = TRUE,
+          placeholder = "Select column containing patient ID"
+        ),
+        
+        virtualSelectInput(
+          "SID",
+          tags$strong("Sample ID Column"),
+          choices = NULL,
+          multiple = FALSE,
+          search = TRUE,
+          placeholder = "Select column containing sample ID"
+        ),
+        
+        h6("Select sample metadata fields", style = "color: #0d6efd; font-weight: bold;"),
+        
+        p(
+          "Please ensure you select the Organism/Pathogen column below. This is a required field for downstream analysis.",
+          class = "info-text"
+        ),
+        
+        virtualSelectInput(
+          "Sample_Date",
+          tags$strong("Sampling Date Column"),
+          choices = NULL,
+          multiple = FALSE,
+          search = TRUE,
+          showValueAsTags = TRUE,
+          hideClearButton = FALSE,
+          placeholder = "Select sampling date column (optional)"
+        ),
+        
+        virtualSelectInput(
+          "Sample_Type",
+          tags$strong("Sample Type Column"),
+          choices = NULL,
+          multiple = FALSE,
+          search = TRUE,
+          showValueAsTags = TRUE,
+          hideClearButton = FALSE,
+          placeholder = "Select specimen type column (optional)"
+        ),
+        
+        virtualSelectInput(
+          "Pathogen",
+          tags$strong("Organism/Pathogen Column *"),
+          choices = NULL,
+          multiple = FALSE,
+          search = TRUE,
+          placeholder = "Select column containing pathogen or organism name"
+        ),
+        
+        h6("Antibiotic Susceptibility Test (AST) Results", style = "color: #0d6efd; font-weight: bold;"),
+        
+        virtualSelectInput(
+          "AB_cols",
+          NULL,
+          choices = NULL,
+          multiple = TRUE,
+          search = TRUE,
+          showValueAsTags = TRUE,
+          placeholder = "Select all columns containing antibiotic test results",
+          disableSelectAll = FALSE,
+          optionsCount = 12
+        ),
+        
+        hr(),
+        
+        actionButton(
+          "btn_process",
+          "Process Data",
+          class = "btn-success w-100",
+          style = "height: 50px; font-size: 16px;",
+          icon = icon("cogs")
         )
-      )
+      ),
+      card_data_preview()
     )
   )
 }
