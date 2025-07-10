@@ -31,3 +31,10 @@ $(document).on('shiny:connected', function () {
     console.warn('VirtualSelect not initialized or missing for:', vsInputId);
   }
 });
+
+$(document).ready(function() {
+        $('.shiny-file-input-progress').hide();
+      });
+      $(document).on('shiny:uploadprogress shiny:uploadfinished', function(e) {
+        $('.shiny-file-input-progress').hide();
+      });

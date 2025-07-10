@@ -1,5 +1,5 @@
 ##### 1.1. Dashboard Tab #####
-dashboard <- function() {
+tab_dashboard <- function() {
   nav_panel(
     title = "Dashboard",
     icon = bsicons::bs_icon("graph-up"),
