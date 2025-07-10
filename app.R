@@ -1,45 +1,48 @@
-###### 0. Load Libraries #####
-# Core Shiny framework
+##### 0. Load Required Libraries and Scripts #####
+
+# Core Shiny framework for building interactive applications
 library(shiny)
 library(shinyWidgets)
 library(shinyjs)
 library(shinybusy)
 
-# Theming and icons
+# Theming and icons support
 library(bslib)
 library(bsicons)
 
-# Data manipulation and general-purpose tidyverse tools
-library(tidyverse)    # Includes dplyr, tidyr, stringr, purrr, readr, etc.
-library(magrittr)     # Pipe operations
-library(data.table)   # Fast data manipulation
+# Data manipulation and utilities (tidyverse, data.table, etc.)
+library(tidyverse)    # dplyr, tidyr, stringr, purrr, readr, etc.
+library(magrittr)     # Pipe operators
+library(data.table)   # High-performance data manipulation
 library(reshape2)     # Data reshaping
-library(scales)       # Number formatting
+library(scales)       # Formatting scales and axes
 
-# AMR analysis
-library(AMR)          # Antimicrobial resistance data and analysis
+# Antimicrobial resistance (AMR) analysis tools
+library(AMR)
 
-# File reading and writing
+# File input/output utilities
 library(readxl)       # Read Excel files
 library(openxlsx)     # Write Excel files
-library(tools)        # File extension checking
+library(tools)        # File extension helpers
 
-# Data display and summaries
-library(DT)           # Interactive tables
-library(gt)           # Table generation
-library(gtsummary)    # Summary tables
+# Data presentation and summary tables
+library(DT)           # Interactive data tables
+library(gt)           # HTML table generation
+library(gtsummary)    # Publication-quality summary tables
 
-# Plotting
-library(plotly)       # Interactive plots
+# Interactive plotting
+library(plotly)       # Plotly for interactive charts
 
+# Source user-defined utility functions and UI modules
+source("utils/ui_utils.R",     local = TRUE)
+source("utils/amr_utils.R",    local = TRUE)
+source("ui/tab_dashboard.R",   local = TRUE)
+source("ui/tab_data_input.R",  local = TRUE)
+source("ui/tab_about.R",       local = TRUE)
 
-source("utils/ui_utils.R", local = TRUE)
-source("utils/amr_utils.R", local = TRUE)
-source("ui/tab_dashboard.R",local = TRUE)
-source("ui/tab_data_input.R",local = TRUE)
-source("ui/tab_about.R",local = TRUE)
-##### 1. UI Definition #####
+##### 1. UI/UX Definition #####
 ui <- page_navbar(
+  ###### 1.1 Setting UI/UX #####
   title = "AMRalyze Dashboard",
   theme = bs_theme(bootswatch = "cerulean"),
   header = tags$head(
@@ -48,16 +51,20 @@ ui <- page_navbar(
     tags$script(src = "www/features.js"),
     tags$meta(name = "viewport", content = "width=device-width, initial-scale=1.0")
   ),
-  ##### 1.1. Dashboard Tab #####
+  
+  ##### 1.2. Tab Dashboard #####
   tab_dashboard(),
   
+  ##### 1.3. Tab Data Input & Preview #####
   tab_data_input(),
-  ##### 1.3. Help Tab #####
+  
+  ##### 1.4. Tab About #####
   tab_about()
 )
-##### 2. Server Logic #####
+
+
+##### 2. Back-end Definition #####
 server <- function(input, output, session) {
-  ##### 2.1. Server Logic for Input Tab ######
   
   ##### 2.1.1. Initialize reactiveValues #####
   rv <- reactiveValues(

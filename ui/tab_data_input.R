@@ -1,3 +1,5 @@
+source("ui/card_data_preview.R",local = TRUE)
+
 tab_data_input <- function() {
   nav_panel(
     title = "Data Input",
@@ -169,7 +171,8 @@ tab_data_input <- function() {
             icon = icon("cogs")
           )
         )
-      )
+      ),
+      card_data_preview()
     )
   )
 }
