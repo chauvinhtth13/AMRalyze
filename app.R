@@ -99,13 +99,13 @@ ui <- page_navbar(
 
 ##### 2. Back-end Definition #####
 
-
-
 server <- function(input, output, session) {
   ##### 2.1.1. Initialize reactive Values #####
-  meta_data <- reactiveValues(uploaded_data  = NULL,
-                              processed_data = NULL,
-                              mdr_data = NULL)
+  meta_data <- reactiveValues(
+    uploaded_data  = NULL,
+    processed_data = NULL,
+    mdr_data = NULL
+  )
   
   output$sheet_selector <- renderUI({
     req(input$file_browse)
@@ -184,7 +184,7 @@ server <- function(input, output, session) {
     } else {
       meta_data$uploaded_data <- df
       mapping_list <- list(
-        No = c("No", "No."),
+        NoID = c("No", "No."),
         PID          = c("PID", "Patient ID", "patient_id", "subject_id"),
         SID          = c("SID", "Sample ID", "sample_id", "specimen_id"),
         Sample_Date  = c("Sample Date", "collection_date", "sampling_date"),
@@ -213,7 +213,7 @@ server <- function(input, output, session) {
                    tryCatch({
                      ##### 2.1.4.1 Validating inputs #####
                      incProgress(0.1, detail = "Validating inputs...")
-                     check_index_col <- paste0(input$No, input$PID, input$SID)
+                     check_index_col <- paste0(input$NoID, input$PID, input$SID)
                      
                      validate(
                        need(
@@ -226,26 +226,40 @@ server <- function(input, output, session) {
                      incProgress(0.1, detail = "Preparing data columns...")
                      
                      core_map <- list(
-                       No = input$No,
+                       NoID = input$NoID,
                        PatientID = input$PID,
                        SampleID = input$SID,
                        SampleDate = input$Sample_Date,
                        SampleType = input$Sample_Type,
                        Pathogen = input$Pathogen
-                     ) %>% purrr::discard(~ is.null(.) ||
-                                            . == "")
+                     )
                      
+                     provided_map <- core_map %>% keep(~ !is.null(.) && . != "")
+                     missing_keys <- names(core_map)[!names(core_map) %in% names(provided_map)]
+                     provided_cols  <- unlist(provided_map)
+                     provided_names <- names(provided_map)
+                     print(missing_keys)
+                     
+                     incProgress(0.1, detail = "Preparing data columns...")
                      df_processed <- meta_data$uploaded_data %>%
-                       select(any_of(unlist(core_map)), any_of(input$AB_cols)) %>%
+                       select(any_of(provided_cols), any_of(input$AB_cols)) %>%
+                       mutate(!!!set_names(rep(list(""), length(missing_keys)), missing_keys)) %>%
                        pivot_longer(
                          cols       = all_of(input$AB_cols),
                          names_to   = c("Antibiotic_Name", "Method_init"),
                          names_pattern = "([^_\\-]+)[_\\-]?(.*)",
                          values_to  = "Result",
                          values_drop_na = TRUE
-                       )
+                       ) 
                      
-                     colnames(df_processed) <- c(names(core_map), "Antibiotic_Name", "Method_init", "Result")
+                     print(df_processed)
+                     
+                     
+                     colnames(df_processed) <- c(names(provided_cols),
+                                                 "Antibiotic_Name",
+                                                 "Method_init",
+                                                 "Result")
+                     incProgress(0.2, detail = "Preparing AST guildeline ...")
                      df_processed <- df_processed %>%
                        mutate(
                          Method = case_when(
@@ -253,7 +267,7 @@ server <- function(input, output, session) {
                            str_detect(Method_init, "\\bNE") ~ "E-Test",
                            TRUE                             ~ "MIC"
                          ),
-                         TempInterpretation = as.sir(str_extract(Result, "R|S|I|SSD|NI")),
+                         TempInterpretation = str_extract(Result, "R|S|I|SSD|NI"),
                          Value  = str_extract(Result, "(<=|>=|<|>)?\\s*[0-9.]+"),
                          MIC    = if_else(Method %in% c("E-Test", "MIC"), Value, NA_character_),
                          Zone   = if_else(Method == "Disk", Value, NA_character_),
@@ -265,40 +279,56 @@ server <- function(input, output, session) {
                          ab_code = as.ab(Antibiotic_Name),
                          AntibioticName = ab_name(ab_code),
                          Interpretation = case_when(
-                           !is.na(TempInterpretation) ~ as.sir(TempInterpretation),
-                           !is.na(MIC) ~ as.sir(MIC,mo = mo_code,ab = ab_code, guideline = input$guideline),
-                           !is.na(Zone) ~ as.sir(Zone,mo = mo_code,ab = ab_code, guideline = input$guideline)),
+                           !is.na(TempInterpretation) ~ as.sir(TempInterpretation),!is.na(MIC) ~ as.sir(
+                             MIC,
+                             mo = mo_code,
+                             ab = ab_code,
+                             guideline = input$guideline
+                           ),!is.na(Zone) ~ as.sir(
+                             Zone,
+                             mo = mo_code,
+                             ab = ab_code,
+                             guideline = input$guideline
+                           )
+                         ),
                          SampleDate = if ("SampleDate" %in% names(.)) {
-                           parsed <- parse_date_time2(SampleDate,
-                                                      orders = DATETIME_FORMATS)
+                           parsed <- parse_date_time2(SampleDate, orders = DATETIME_FORMATS)
                            # catch pure-numeric dates (Excel-style)
                            if_else(
                              is.na(parsed) & str_detect(SampleDate, "^[0-9]+(\\.[0-9]+)?$"),
-                             as.POSIXct(as.numeric(SampleDate),origin = "1900-01-01",tz = ""),
+                             as.POSIXct(
+                               as.numeric(SampleDate),
+                               origin = "1900-01-01",
+                               tz = ""
+                             ),
                              parsed
                            )
                          } else {
                            NULL
                          }
-                       ) %>% 
+                       ) %>%
                        select(-c(Method_init, Result, Value, TempInterpretation))
                      meta_data$processed_data <- df_processed
                      ##### 2.1.4.3 Calculating MDR columns #####
-                     if(input$MDR_cal){
-                       incProgress(0.6, detail = "Calculating MDR status...")
+                     if (input$MDR_cal) {
+                       incProgress(0.4, detail = "Calculating MDR status...")
                        mdr_data <- df_processed %>% filter(!is.na(Interpretation)) %>%
                          tidyr::pivot_wider(
-                           id_cols = c(PatientID, SampleID, Pathogen, mo_code, kingdom, gram_stain),
+                           id_cols = c(names(core_map), mo_code, kingdom, gram_stain),
                            names_from = ab_code,
                            values_from = Interpretation
                          ) %>% mutate(
-                           MDR = mdro(guideline = "CMI2012", pct_required_classes = 0.5),
-                           MDR = if_else(is.na(MDR), "Not Determined", MDR)
+                           MDR = mdro(
+                             guideline = "CMI2012",
+                             pct_required_classes = 0.5
+                           ),
+                           MDR = fct_na_value_to_level(MDR, "Not Determined")
                          )
+                       
                        meta_data$mdr_data <- mdr_data
-                       incProgress(0.4, detail = "Finalizing...")
+                       incProgress(0.1, detail = "Finalizing...")
                      } else {
-                       incProgress(0.8, detail = "Finalizing...")
+                       incProgress(0.5, detail = "Finalizing...")
                      }
                      
                      showNotification("Data processed successfully! Dashboard updated.",
@@ -312,9 +342,119 @@ server <- function(input, output, session) {
                      )
                      stop(e)
                    })
-                   
                  })
   })
+  
+  no_ids <- reactive({
+    req(meta_data$processed_data)
+    if ("NoID" %in% names(meta_data$processed_data)) {
+      sort(unique(meta_data$processed_data$NoID))
+    } else {
+      NULL
+    }
+  })
+  
+  patient_ids <- reactive({
+    req(meta_data$processed_data)
+    if ("PatientID" %in% names(meta_data$processed_data)) {
+      sort(unique(meta_data$processed_data$PatientID))
+    } else {
+      NULL
+    }
+  })
+  
+  
+  observe({
+    if (is.null(no_ids)) {
+      disable("NoID_show")
+    } else {
+      enable("NoID_show")
+      if (input$PatientID_show != "") {
+        new_no_ids <- meta_data$processed_data %>%
+          filter(PatientID == input$PatientID_show) %>%
+          pull(NoID) %>% # Use the standardized Pathogen name
+          unique() %>%
+          sort()
+        updateVirtualSelect(
+          session = session,
+          inputId = "NoID_show",
+          choices = new_no_ids,
+          selected = new_no_ids[1]
+        )
+      } else {
+        updateVirtualSelect(session = session,
+                            inputId = "NoID_show",
+                            choices = no_ids(),)
+      }
+    }
+  })
+  
+  observe({
+    if (is.null(patient_ids)) {
+      disable("PatientID_show")
+    } else {
+      enable("PatientID_show")
+      if (input$NoID_show != "") {
+        new_patient_ids <- meta_data$processed_data %>%
+          filter(NoID == input$NoID_show) %>%
+          pull(PatientID) %>% # Use the standardized Pathogen name
+          unique() %>%
+          sort()
+        updateVirtualSelect(
+          session = session,
+          inputId = "PatientID_show",
+          choices = new_patient_ids,
+          selected = new_patient_ids[1]
+        )
+      } else {
+        updateVirtualSelect(session = session,
+                            inputId = "PatientID_show",
+                            choices = patient_ids(),)
+      }
+    }
+  })
+  
+  
+  # observe({
+  #   req(meta_data$processed_data)
+  #   df <- meta_data$processed_data
+  #   print(df)
+  #   if("NoID" %in% names(df)){
+  #     enable("NoID_show")
+  #     ids <- sort(unique(df$NoID))
+  #     updateVirtualSelect(inputId = "NoID_show",
+  #                       choices  = ids,
+  #                       selected = ids[1])
+  #   } else {
+  #     disable("NoID_show")
+  #   }
+  #
+  #   if("PatientID" %in% names(df)){
+  #     enable("PatientID_show")
+  #     if("NoID" %in% names(df))
+  #     {
+  #       patients <- df %>%
+  #         filter(NoID == input$NoID_show) %>%
+  #         pull(PatientID) %>%
+  #         unique() %>%
+  #         sort()
+  #       updateVirtualSelect(inputId = "PatientID_show",
+  #                         choices  = patients,
+  #                         selected = patients[1])
+  #     } else {
+  #
+  #       patients <- sort(unique(df$PatientID))
+  #       updateVirtualSelect(inputId = "PatientID_show",
+  #                         choices  = patients,
+  #                         selected = patients[1])
+  #     }
+  #
+  #   } else {
+  #     disable("PatientID_show")
+  #   }
+  #
+  # })
+  
   
 }
 

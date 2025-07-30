@@ -74,11 +74,12 @@ tab_data_input <- function() {
         h6("Select at least one identifier column", style = "color: #0d6efd; font-weight: bold;"),
         
         virtualSelectInput(
-          "No",
+          "NoID",
           tags$strong("No. Column"),
           choices = NULL,
           multiple = FALSE,
           search = TRUE,
+          hideClearButton = FALSE,
           placeholder = "Select row number or record index column"
         ),
         
@@ -88,6 +89,7 @@ tab_data_input <- function() {
           choices = NULL,
           multiple = FALSE,
           search = TRUE,
+          hideClearButton = FALSE,
           placeholder = "Select column containing patient ID"
         ),
         
@@ -97,6 +99,7 @@ tab_data_input <- function() {
           choices = NULL,
           multiple = FALSE,
           search = TRUE,
+          hideClearButton = FALSE,
           placeholder = "Select column containing sample ID"
         ),
         
@@ -135,6 +138,7 @@ tab_data_input <- function() {
           choices = NULL,
           multiple = FALSE,
           search = TRUE,
+          hideClearButton = FALSE,
           placeholder = "Select column containing pathogen or organism name"
         ),
         
@@ -148,7 +152,6 @@ tab_data_input <- function() {
           search = TRUE,
           showValueAsTags = TRUE,
           placeholder = "Select all columns containing antibiotic test results",
-          disableSelectAll = FALSE,
           optionsCount = 12
         ),
         
