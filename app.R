@@ -234,7 +234,8 @@ server <- function(input, output, session) {
                        Pathogen = input$Pathogen
                      )
                      
-                     provided_map <- core_map %>% keep(~ !is.null(.) && . != "")
+                     provided_map <- core_map %>% keep(~ !is.null(.) &&
+                                                         . != "")
                      missing_keys <- names(core_map)[!names(core_map) %in% names(provided_map)]
                      provided_cols  <- unlist(provided_map)
                      provided_names <- names(provided_map)
@@ -249,39 +250,43 @@ server <- function(input, output, session) {
                          names_pattern = "([^_\\-]+)[_\\-]?(.*)",
                          values_to  = "Result",
                          values_drop_na = TRUE
-                       ) 
-
+                       )
+                     
                      incProgress(0.2, detail = "Preparing AST guildeline ...")
                      df_processed <- df_processed %>%
                        mutate(
-                         Method = case_when(
-                           str_detect(Method_init, "\\bND") ~ "Disk",
-                           str_detect(Method_init, "\\bNE") ~ "E-Test",
-                           TRUE                             ~ "MIC"
-                         ),
                          TempInterpretation = str_extract(Result, "R|S|I|SSD|NI"),
-                         Value  = str_extract(Result, "(<=|>=|<|>)?\\s*[0-9.]+"),
-                         MIC    = if_else(Method %in% c("E-Test", "MIC"), Value, NA_character_),
-                         Zone   = if_else(Method == "Disk", Value, NA_character_),
-                         MIC = as.mic(MIC),
-                         Zone = as.disk(Zone),
                          mo_code = as.mo(Pathogen),
                          kingdom = mo_kingdom(mo_code),
                          gram_stain = mo_gramstain(mo_code),
                          ab_code = as.ab(Antibiotic_Name),
                          AntibioticName = ab_name(ab_code),
+                         Method = case_when(
+                           str_detect(Method_init, "\\bND") ~ "Disk",
+                           str_detect(Method_init, "\\bNE") ~ "E-Test",
+                           TRUE                             ~ "MIC"
+                         ),
+                         Value  = str_extract(Result, "(<=|>=|<|>)?\\s*[0-9.]+"),
+                         MIC    = if_else(Method %in% c("E-Test", "MIC"), Value, NA_character_),
+                         Zone   = if_else(Method == "Disk", Value, NA_character_),
+                         MIC = as.mic(MIC),
+                         Zone = as.disk(Zone),
+                         InterpretationMIC = as.sir(
+                           MIC,
+                           mo = mo_code,
+                           ab = ab_code,
+                           guideline = input$guideline
+                         ),
+                         InterpretationZone = as.sir(
+                           Zone,
+                           mo = mo_code,
+                           ab = ab_code,
+                           guideline = input$guideline
+                         ),
                          Interpretation = case_when(
-                           !is.na(TempInterpretation) ~ as.sir(TempInterpretation),!is.na(MIC) ~ as.sir(
-                             MIC,
-                             mo = mo_code,
-                             ab = ab_code,
-                             guideline = input$guideline
-                           ),!is.na(Zone) ~ as.sir(
-                             Zone,
-                             mo = mo_code,
-                             ab = ab_code,
-                             guideline = input$guideline
-                           )
+                           !is.na(TempInterpretation) ~ as.sir(TempInterpretation),
+                           !is.na(InterpretationMIC) ~ as.sir(InterpretationMIC),
+                           !is.na(InterpretationZone) ~ as.sir(InterpretationZone)
                          ),
                          SampleDate = if ("SampleDate" %in% names(.)) {
                            parsed <- parse_date_time2(SampleDate, orders = DATETIME_FORMATS)
@@ -299,7 +304,7 @@ server <- function(input, output, session) {
                            NULL
                          }
                        ) %>%
-                       select(-c(Method_init, Result, Value, TempInterpretation))
+                       select(-c(Method_init, Result, Value, TempInterpretation,Antibiotic_Name))
                      meta_data$processed_data <- df_processed
                      ##### 2.1.4.3 Calculating MDR columns #####
                      if (input$MDR_cal) {
@@ -315,7 +320,7 @@ server <- function(input, output, session) {
                              pct_required_classes = 0.5
                            ),
                            MDR = fct_na_value_to_level(MDR, "Not Determined")
-                         ) %>% 
+                         ) %>%
                          relocate(MDR, .after = Pathogen)
                        
                        meta_data$mdr_data <- mdr_data
@@ -337,17 +342,114 @@ server <- function(input, output, session) {
                    })
                  })
   })
+  ##### 2.1.7 Show Patient Data #####
   output$data_AST_Table <- renderDT(
-    meta_data$processed_data, # data
-    class = "display nowrap compact", # style
+    meta_data$processed_data,
+    # data
+    class = "display nowrap compact",
+    # style
     filter = "top" # location of column filters
   )
   
   output$data_MDR_Table <- renderDT(
-    meta_data$mdr_data, # data
-    class = "display nowrap compact", # style
+    meta_data$mdr_data,
+    # data
+    class = "display nowrap compact",
+    # style
     filter = "top" # location of column filters
   )
+  ##### 2.1.8 Download Data #####
+  ##### 2.1.8.1 Download AST Data #####
+  output$download_ast_data <- downloadHandler(
+    filename = function() {
+      paste0("AST_data_", Sys.Date(), ".csv")
+    },
+    content = function(con) {
+      write.csv(meta_data$processed_data,con,row.names = FALSE)
+    }
+  )
+  ##### 2.1.8.2 Download MDR Data #####
+  output$download_mdr_data <- downloadHandler(
+    filename = function() {
+      paste0("AST_data_", Sys.Date(), ".csv")
+    },
+    content = function(con) {
+      write.csv(meta_data$mdr_data,con,row.names = FALSE)
+    }
+  )
+  ##### 2.2. Server Logic For Dashboard #####
+  
+  ###### 2.2.1 Dashboard Metrics  ######
+  output$total_records <- renderText({
+    if (is.null(meta_data$uploaded_data))
+      "0"
+    else
+      scales::comma(nrow(meta_data$uploaded_data))
+  })
+  
+  ###### 2.1.7. Main Content Area Preview ######
+  
+  
+  output$pathogen_summary_plot <- renderPlotly({
+    # Require processed data
+    validate(
+      need(
+        rv$processed_data,
+        "Please upload and process data first ('Input' tab)."
+      ),
+      need(nrow(rv$processed_data) > 0, "Processed data is empty.")
+    )
+    
+    pathogen_freq <- rv$processed_data %>%
+      dplyr::distinct(PatientID, SampleID, Pathogen) %>% # Count each pathogen once per sample
+      dplyr::count(Pathogen, sort = TRUE, name = "Frequency")
+    
+    # Check if calculation resulted in data
+    validate(need(nrow(pathogen_freq) > 0, "No pathogen data to summarize."))
+    
+    # --- Optional: Group less frequent pathogens into 'Other' ---
+    top_n_pathogens <- 15 # Show top N pathogens separately
+    if (nrow(pathogen_freq) > top_n_pathogens) {
+      pathogen_freq <- pathogen_freq %>%
+        dplyr::mutate(
+          Pathogen_Group = dplyr::case_when(
+            dplyr::row_number() <= top_n_pathogens ~ Pathogen,
+            TRUE ~ "Other (< Min Frequency)" # Group the rest
+          )
+        ) %>%
+        dplyr::group_by(Pathogen_Group) %>%
+        dplyr::summarise(Frequency = sum(Frequency), .groups = 'drop') %>%
+        dplyr::rename(Pathogen = Pathogen_Group) # Rename for plotting
+    }
+    
+    # Create the plot using ggplot2
+    gg <- ggplot(pathogen_freq, aes(x = reorder(Pathogen, Frequency), y = Frequency)) +
+      geom_col(fill = "#2c7fb8", width = 0.7) + # Use a color for bars
+      coord_flip() + # Flip coordinates for better readability of labels
+      labs(title = "Frequency of Identified Pathogens", x = "Pathogen", y = "Number of Samples") +
+      theme_minimal(base_size = 12) + # Use a clean theme
+      theme(
+        plot.title = element_text(hjust = 0.5, face = "bold"),
+        # Center title
+        panel.grid.major.y = element_blank(),
+        # Remove horizontal grid lines
+        panel.grid.minor.x = element_blank(),
+        axis.text.y = element_text(size = 10),
+        # Adjust text size if needed
+        axis.text.x = element_text(size = 10)
+      ) +
+      # Add frequency labels to the bars
+      geom_text(
+        aes(label = scales::comma(Frequency), y = Frequency * 1.08),
+        hjust = -0.2,
+        size = 5,
+        color = "black"
+      )
+    
+    # Return the plot
+    ggplotly(gg)
+    
+  })
 }
 
 ##### 3. Run App #####

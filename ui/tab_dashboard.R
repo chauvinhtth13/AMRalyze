@@ -21,36 +21,6 @@ tab_dashboard <- function() {
               class = "h-100",
               style = "background-color: #D6E4FF !important; color: #003E8A !important; border: 1px solid #B8D4FF;"
             )
-          ),
-          div(
-            class = "col-12 col-md-6 col-lg-3",
-            value_box(
-              title = "Total Patients",
-              value = textOutput("total_patients"),
-              showcase = bsicons::bs_icon("person-vcard"),
-              class = "h-100",
-              style = "background-color: #D3F9E8 !important; color: #096C5F !important; border: 1px solid #A8E6C7;"
-            )
-          ),
-          div(
-            class = "col-12 col-md-6 col-lg-3",
-            value_box(
-              title = "Total Samples",
-              value = textOutput("total_samples"),
-              showcase = bsicons::bs_icon("database"),
-              class = "h-100",
-              style = "background-color: #FFE5D0 !important; color: #A14C00 !important; border: 1px solid #FFD4A8;"
-            )
-          ),
-          div(
-            class = "col-12 col-md-6 col-lg-3",
-            value_box(
-              title = "Timelines",
-              value = textOutput("timeline"),
-              showcase = bsicons::bs_icon("calendar3"),
-              class = "h-100",
-              style = "background-color: #EAD7FF !important; color: #4B2C82 !important; border: 1px solid #D4BAFF;"
-            )
           )
         )
       ),
