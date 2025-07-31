@@ -1,4 +1,4 @@
-source("ui/card_data_preview.R", local = TRUE)
+#source("ui/card_data_preview.R", local = TRUE)
 
 tab_data_input <- function() {
   nav_panel(
@@ -165,7 +165,26 @@ tab_data_input <- function() {
           icon = icon("cogs")
         )
       ),
-      card_data_preview()
+      card(
+        card_header(div(
+          h6("Overview AST Data", class = "mb-0"),
+          span(
+            downloadButton("download_ast_data", "Download AST Data", class = "btn-outline-success btn-sm"),
+            style = "float: right;"
+          )
+        ), class = "bg-light"),
+        card_body(dataTableOutput("data_AST_Table"))
+      ),
+      card(
+        card_header(div(
+          h6("Overview MDR Data", class = "mb-0"),
+          span(
+            downloadButton("download_mdr_data", "Download MDR Data", class = "btn-outline-success btn-sm"),
+            style = "float: right;"
+          )
+        ), class = "bg-light"),
+        card_body(dataTableOutput("data_MDR_Table"))
+      )
     )
   )
 }

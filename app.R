@@ -238,12 +238,11 @@ server <- function(input, output, session) {
                      missing_keys <- names(core_map)[!names(core_map) %in% names(provided_map)]
                      provided_cols  <- unlist(provided_map)
                      provided_names <- names(provided_map)
-                     print(missing_keys)
                      
                      incProgress(0.1, detail = "Preparing data columns...")
                      df_processed <- meta_data$uploaded_data %>%
                        select(any_of(provided_cols), any_of(input$AB_cols)) %>%
-                       mutate(!!!set_names(rep(list(""), length(missing_keys)), missing_keys)) %>%
+                       #mutate(!!!set_names(rep(list(""), length(missing_keys)), missing_keys)) %>%
                        pivot_longer(
                          cols       = all_of(input$AB_cols),
                          names_to   = c("Antibiotic_Name", "Method_init"),
@@ -251,14 +250,7 @@ server <- function(input, output, session) {
                          values_to  = "Result",
                          values_drop_na = TRUE
                        ) 
-                     
-                     print(df_processed)
-                     
-                     
-                     colnames(df_processed) <- c(names(provided_cols),
-                                                 "Antibiotic_Name",
-                                                 "Method_init",
-                                                 "Result")
+
                      incProgress(0.2, detail = "Preparing AST guildeline ...")
                      df_processed <- df_processed %>%
                        mutate(
@@ -314,7 +306,7 @@ server <- function(input, output, session) {
                        incProgress(0.4, detail = "Calculating MDR status...")
                        mdr_data <- df_processed %>% filter(!is.na(Interpretation)) %>%
                          tidyr::pivot_wider(
-                           id_cols = c(names(core_map), mo_code, kingdom, gram_stain),
+                           id_cols = c(provided_names, mo_code, kingdom, gram_stain),
                            names_from = ab_code,
                            values_from = Interpretation
                          ) %>% mutate(
@@ -323,7 +315,8 @@ server <- function(input, output, session) {
                              pct_required_classes = 0.5
                            ),
                            MDR = fct_na_value_to_level(MDR, "Not Determined")
-                         )
+                         ) %>% 
+                         relocate(MDR, .after = Pathogen)
                        
                        meta_data$mdr_data <- mdr_data
                        incProgress(0.1, detail = "Finalizing...")
@@ -344,118 +337,17 @@ server <- function(input, output, session) {
                    })
                  })
   })
+  output$data_AST_Table <- renderDT(
+    meta_data$processed_data, # data
+    class = "display nowrap compact", # style
+    filter = "top" # location of column filters
+  )
   
-  no_ids <- reactive({
-    req(meta_data$processed_data)
-    if ("NoID" %in% names(meta_data$processed_data)) {
-      sort(unique(meta_data$processed_data$NoID))
-    } else {
-      NULL
-    }
-  })
-  
-  patient_ids <- reactive({
-    req(meta_data$processed_data)
-    if ("PatientID" %in% names(meta_data$processed_data)) {
-      sort(unique(meta_data$processed_data$PatientID))
-    } else {
-      NULL
-    }
-  })
-  
-  
-  observe({
-    if (is.null(no_ids)) {
-      disable("NoID_show")
-    } else {
-      enable("NoID_show")
-      if (input$PatientID_show != "") {
-        new_no_ids <- meta_data$processed_data %>%
-          filter(PatientID == input$PatientID_show) %>%
-          pull(NoID) %>% # Use the standardized Pathogen name
-          unique() %>%
-          sort()
-        updateVirtualSelect(
-          session = session,
-          inputId = "NoID_show",
-          choices = new_no_ids,
-          selected = new_no_ids[1]
-        )
-      } else {
-        updateVirtualSelect(session = session,
-                            inputId = "NoID_show",
-                            choices = no_ids(),)
-      }
-    }
-  })
-  
-  observe({
-    if (is.null(patient_ids)) {
-      disable("PatientID_show")
-    } else {
-      enable("PatientID_show")
-      if (input$NoID_show != "") {
-        new_patient_ids <- meta_data$processed_data %>%
-          filter(NoID == input$NoID_show) %>%
-          pull(PatientID) %>% # Use the standardized Pathogen name
-          unique() %>%
-          sort()
-        updateVirtualSelect(
-          session = session,
-          inputId = "PatientID_show",
-          choices = new_patient_ids,
-          selected = new_patient_ids[1]
-        )
-      } else {
-        updateVirtualSelect(session = session,
-                            inputId = "PatientID_show",
-                            choices = patient_ids(),)
-      }
-    }
-  })
-  
-  
-  # observe({
-  #   req(meta_data$processed_data)
-  #   df <- meta_data$processed_data
-  #   print(df)
-  #   if("NoID" %in% names(df)){
-  #     enable("NoID_show")
-  #     ids <- sort(unique(df$NoID))
-  #     updateVirtualSelect(inputId = "NoID_show",
-  #                       choices  = ids,
-  #                       selected = ids[1])
-  #   } else {
-  #     disable("NoID_show")
-  #   }
-  #
-  #   if("PatientID" %in% names(df)){
-  #     enable("PatientID_show")
-  #     if("NoID" %in% names(df))
-  #     {
-  #       patients <- df %>%
-  #         filter(NoID == input$NoID_show) %>%
-  #         pull(PatientID) %>%
-  #         unique() %>%
-  #         sort()
-  #       updateVirtualSelect(inputId = "PatientID_show",
-  #                         choices  = patients,
-  #                         selected = patients[1])
-  #     } else {
-  #
-  #       patients <- sort(unique(df$PatientID))
-  #       updateVirtualSelect(inputId = "PatientID_show",
-  #                         choices  = patients,
-  #                         selected = patients[1])
-  #     }
-  #
-  #   } else {
-  #     disable("PatientID_show")
-  #   }
-  #
-  # })
-  
-  
+  output$data_MDR_Table <- renderDT(
+    meta_data$mdr_data, # data
+    class = "display nowrap compact", # style
+    filter = "top" # location of column filters
+  )
 }
 
 ##### 3. Run App #####
