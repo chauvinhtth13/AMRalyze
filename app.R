@@ -371,7 +371,7 @@ server <- function(input, output, session) {
   ##### 2.1.8.2 Download MDR Data #####
   output$download_mdr_data <- downloadHandler(
     filename = function() {
-      paste0("AST_data_", Sys.Date(), ".csv")
+      paste0("MDR_data_", Sys.Date(), ".csv")
     },
     content = function(con) {
       write.csv(meta_data$mdr_data,con,row.names = FALSE)
@@ -382,26 +382,68 @@ server <- function(input, output, session) {
   ###### 2.2.1 Dashboard Metrics  ######
   output$total_records <- renderText({
     if (is.null(meta_data$uploaded_data))
-      "0"
+      "-"
     else
       scales::comma(nrow(meta_data$uploaded_data))
   })
   
+  output$total_patients <- renderText({
+    if (is.null(meta_data$processed_data))
+    {
+      "-"
+    }
+    else{
+      if ("PatientID" %in% names(meta_data$processed_data)) {
+        scales::comma(n_distinct(meta_data$processed_data$PatientID, na.rm = TRUE))
+      } else {
+        "No PatientID collumn"
+      }
+    }
+  })
+  
+  output$total_samples <- renderText({
+    if (is.null(meta_data$processed_data))
+    {
+      "-"
+    }
+    else{
+      if ("SampleID" %in% names(meta_data$processed_data)) {
+        scales::comma(n_distinct(meta_data$processed_data$SampleID, na.rm = TRUE))
+      } else {
+        "No SampleID collumn"
+      }
+    }
+  })
+  
+  output$timeline <- renderText({
+    if (is.null(meta_data$processed_data))
+    {
+      "-"
+    }
+    else{
+      if ("SampleDate" %in% names(meta_data$processed_data)) {
+        paste(min(meta_data$processed_data$SampleDate), "to", max(meta_data$processed_data$SampleDate))
+      } else {
+        "No Date collumn"
+      }
+    }
+  })
+  
+  
   ###### 2.1.7. Main Content Area Preview ######
-  
-  
   output$pathogen_summary_plot <- renderPlotly({
     # Require processed data
     validate(
       need(
-        rv$processed_data,
+        meta_data$processed_data,
         "Please upload and process data first ('Input' tab)."
       ),
-      need(nrow(rv$processed_data) > 0, "Processed data is empty.")
+      need(nrow(meta_data$processed_data) > 0, "Processed data is empty.")
     )
     
-    pathogen_freq <- rv$processed_data %>%
-      dplyr::distinct(PatientID, SampleID, Pathogen) %>% # Count each pathogen once per sample
+    pathogen_freq <- meta_data$processed_data %>%
+      select(any_of(c("No", "PatientID", "SampleID", "Pathogen"))) %>% 
+      unique() %>%
       dplyr::count(Pathogen, sort = TRUE, name = "Frequency")
     
     # Check if calculation resulted in data
@@ -440,7 +482,7 @@ server <- function(input, output, session) {
       ) +
       # Add frequency labels to the bars
       geom_text(
-        aes(label = scales::comma(Frequency), y = Frequency * 1.08),
+        aes(label = scales::comma(Frequency), y = Frequency*1.05),
         hjust = -0.2,
         size = 5,
         color = "black"
@@ -448,7 +490,119 @@ server <- function(input, output, session) {
     
     # Return the plot
     ggplotly(gg)
-    
+  })
+  
+  observe({
+    req(meta_data$processed_data)
+    list_gram_negative <- meta_data$processed_data %>%
+      select(any_of(c("No", "PatientID", "SampleID", "Pathogen","kingdom","gram_stain"))) %>%
+      unique() %>%
+      dplyr::filter(kingdom == "Bacteria" &
+                      gram_stain == "Gram-negative") %>%
+      dplyr::count(Pathogen, sort = TRUE, name = "Frequency") %>%
+      pull(Pathogen)
+
+    selected_choice <- if (length(list_gram_negative) >= 4) {
+      # Use the value from the original vector for selection logic
+      list_gram_negative[1:4]
+    } else {
+      NULL
+    }
+
+    updateVirtualSelect(
+      session = session,
+      inputId = "list_gram_negative",
+      choices = list_gram_negative,
+      selected = selected_choice
+    )
+  })
+  
+  output$ast_gram_negative_table <- render_gt({
+    validate(need(
+      meta_data$uploaded_data,
+      "Please upload and process data first ('Input' tab)."
+    ))
+    validate(need(
+      length(input$list_gram_negative) > 0,
+      "Choose Gram-negative Pathogen."
+    ))
+    if(is.null(meta_data$mdr_data))
+    {
+      data_sub <- meta_data$processed_data %>% 
+        filter(!is.na(Interpretation)) %>%
+        filter(Pathogen %in% input$list_gram_negative) %>%
+        select(any_of(
+          c(
+            "No",
+            "PatientID",
+            "SampleID",
+            "Pathogen",
+            "ab_code",
+            "Interpretation"
+          )
+        )) %>%
+        tidyr::pivot_wider(
+          names_from = ab_code,
+          values_from = Interpretation
+        ) %>%  select(-c(any_of(
+          c(
+            "No",
+            "PatientID",
+            "SampleID"
+          )
+        ))) %>%
+        select(where(~ !all(is.na(.)))) %>%
+        rename_if(is.sir, ab_name) %>%
+        mutate_if(
+          is.sir,
+          .funs = function(x)
+            if_else(x == "R", TRUE, FALSE)
+        )
+    } else {
+      data_sub <- meta_data$mdr_data %>%
+        filter(Pathogen %in% input$list_gram_negative) %>%
+        select(-c(any_of(
+          c(
+            "No",
+            "PatientID",
+            "SampleID",
+            "SampleType",
+            "SampleDate",
+            "mo_code",
+            "kingdom",
+            "gram_stain"
+          )
+        ))) %>%
+        select(where(~ !all(is.na(.)))) %>%
+        rename_if(is.sir, ab_name) %>%
+        mutate_if(
+          is.sir,
+          .funs = function(x)
+            if_else(x == "R", TRUE, FALSE)
+        )
+    }
+
+    list_ab <- setdiff(names(data_sub), c("Pathogen", "MDR"))
+
+
+    gt_table <- data_sub %>%
+      tbl_summary(
+        by = Pathogen,
+        statistic = everything() ~ "{p}% ({n}/{N})",
+        missing = "no",
+        digits = everything() ~ c(1, 1)
+      ) %>%
+      modify_header(label = "") %>%
+      modify_column_indent(columns = label, row = label != "MDR") %>%
+      modify_footnote(all_stat_cols() ~ "Resitant Percent (%), (Resitant case / Total) ") %>%
+      modify_table_body(~ .x %>%
+                          mutate(
+                            across(all_stat_cols(), ~ gsub("^NA.*0.0/0.0)", "-", .)),
+                            across(all_stat_cols(), ~ gsub("0\\.0 \\(NA%\\)", "-", .))
+                          )) %>%
+      as_gt() %>%
+      add_group_antibiotic(list_ab = list_ab)
+    return(gt_table)
   })
 }
 
