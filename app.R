@@ -100,6 +100,7 @@ ui <- page_navbar(
 ##### 2. Back-end Definition #####
 
 server <- function(input, output, session) {
+  ##### 2.1 Data input setting #####
   ##### 2.1.1. Initialize reactive Values #####
   meta_data <- reactiveValues(
     uploaded_data  = NULL,
@@ -107,46 +108,32 @@ server <- function(input, output, session) {
     mdr_data = NULL
   )
   
+  ##### 2.1.2. File Input Handling #####
   output$sheet_selector <- renderUI({
     req(input$file_browse)
     if (is_valid_excel(input$file_browse)) {
-      selectInput("sheet_name", "Select Excel Sheet:", choices = NULL)
+      sheets <- tryCatch(
+        excel_sheets(input$file_browse$datapath),
+        error = function(e) character(0)
+      )
+      if (length(sheets) == 0) {
+        showNotification("Không tìm thấy sheet trong file Excel này!", type = "error")
+        return(NULL)
+      }
+      virtualSelectInput("sheet_name", "Select Excel Sheet:", choices = sheets, selected = sheets[1])
     }
   })
   
-  ##### 2.1.2. File Input Handling #####
   observeEvent(input$file_browse, {
-    if (input$file_browse$size > MAX_FILE_SIZE_BYTES) {
-      return(showNotification(paste(
-        "Kích thước vượt", MAX_FILE_SIZE_MB, "MB"
-      )),
-      type = "error",
-      duration = 8)
-    }
+    req(input$file_browse)
     
-    if (is_valid_excel(input$file_browse)) {
-      sheets <- tryCatch({
-        excel_sheets(input$file_browse$datapath)
-      }, error = function(e) {
-        showNotification(
-          "Lỗi khi đọc file. Vui lòng tải lên file .csv hoặc .xlsx hợp lệ.",
-          type = "error",
-          duration = 8
-        )
-        NULL
-      })
-      updateSelectInput(
-        session,
-        "sheet_name",
-        choices = sheets %||% NULL,
-        selected = sheets[1] %||% NULL
+    if (input$file_browse$size > MAX_FILE_SIZE_BYTES) {
+      showNotification(
+        paste("Kích thước vượt", MAX_FILE_SIZE_MB, "MB"),
+        type = "error",
+        duration = 8
       )
-    } else {
-      # Clear selectInput for non-Excel files (e.g., .csv)
-      updateSelectInput(session,
-                        "sheet_name",
-                        choices = NULL,
-                        selected = NULL)
+      return(NULL)
     }
   })
   
@@ -377,7 +364,7 @@ server <- function(input, output, session) {
       write.csv(meta_data$mdr_data,con,row.names = FALSE)
     }
   )
-  ##### 2.2. Server Logic For Dashboard #####
+  ##### 2.2 Server Logic For Dashboard #####
   
   ###### 2.2.1 Dashboard Metrics  ######
   output$total_records <- renderText({
@@ -429,8 +416,7 @@ server <- function(input, output, session) {
     }
   })
   
-  
-  ###### 2.1.7. Main Content Area Preview ######
+  ###### 2.2.2. Main Content Area Preview ######
   output$pathogen_summary_plot <- renderPlotly({
     # Require processed data
     validate(
@@ -461,33 +447,24 @@ server <- function(input, output, session) {
         ) %>%
         dplyr::group_by(Pathogen_Group) %>%
         dplyr::summarise(Frequency = sum(Frequency), .groups = 'drop') %>%
-        dplyr::rename(Pathogen = Pathogen_Group) # Rename for plotting
+        dplyr::rename(Pathogen = Pathogen_Group)
     }
-    
+    pathogen_freq <- pathogen_freq %>%
+      dplyr::mutate(Pathogen = fct_reorder(Pathogen, Frequency))
     # Create the plot using ggplot2
-    gg <- ggplot(pathogen_freq, aes(x = reorder(Pathogen, Frequency), y = Frequency)) +
+    gg <- ggplot(pathogen_freq, aes(x = Pathogen, y = Frequency)) +
       geom_col(fill = "#2c7fb8", width = 0.7) + # Use a color for bars
       coord_flip() + # Flip coordinates for better readability of labels
-      labs(title = "Frequency of Identified Pathogens", x = "Pathogen", y = "Number of Samples") +
+      labs(y = "Number of Samples") +
       theme_minimal(base_size = 12) + # Use a clean theme
       theme(
         plot.title = element_text(hjust = 0.5, face = "bold"),
-        # Center title
+        axis.title.x =  element_blank(),
         panel.grid.major.y = element_blank(),
-        # Remove horizontal grid lines
         panel.grid.minor.x = element_blank(),
         axis.text.y = element_text(size = 10),
-        # Adjust text size if needed
         axis.text.x = element_text(size = 10)
-      ) +
-      # Add frequency labels to the bars
-      geom_text(
-        aes(label = scales::comma(Frequency), y = Frequency*1.05),
-        hjust = -0.2,
-        size = 5,
-        color = "black"
       )
-    
     # Return the plot
     ggplotly(gg)
   })
