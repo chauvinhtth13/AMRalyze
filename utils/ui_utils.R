@@ -268,17 +268,66 @@ select_antibiotic2group <- function(label, groups){
   return(label %in% antibiotics_group$name)
 }
 
-add_group_antibiotic <- function(gt_table, list_ab)
+add_group_antibiotic <- function(gt_table, list_ab, has_mdr = FALSE)
 {
+  # Format antibiotic names for matching
   names_ab <- format_antibiotic_label(list_ab)
-  groups_ab <- ab_group(names_ab)
-  ab_data <- data.frame(names_ab,groups_ab)
-  for (i in sort(unique(groups_ab),decreasing = TRUE))
-  {
-    sub_ab <- ab_data %>% filter(groups_ab == i)
+  print(names_ab)
+  
+  # Get antibiotic groups, handling NAs properly
+  groups_ab <- sapply(names_ab, function(ab) {
+    grp <- tryCatch({
+      result <- ab_group(ab, language = NULL)
+      if (length(result) == 0 || is.na(result)) NA_character_ else result
+    }, error = function(e) NA_character_)
+    
+    if (is.na(grp)) {
+      # Try to identify combination antibiotics
+      if (grepl("/", ab)) {
+        "Combination antibiotics"
+      } else {
+        "Other antibiotics"
+      }
+    } else {
+      grp
+    }
+  })
+  
+  ab_data <- data.frame(
+    names_ab = names_ab, 
+    groups_ab = as.character(groups_ab),
+    stringsAsFactors = FALSE
+  )
+  
+  # Remove any rows where group is still NA
+  ab_data <- ab_data %>% filter(!is.na(groups_ab))
+  
+  # Get unique groups and sort them alphabetically (descending for proper gt ordering)
+  # Put "Other antibiotics" and "Combination antibiotics" at the end
+  unique_groups <- unique(ab_data$groups_ab)
+  special_groups <- c("Combination antibiotics", "Other antibiotics")
+  regular_groups <- setdiff(unique_groups, special_groups)
+  ordered_groups <- c(
+    rev(sort(regular_groups)),
+    intersect(special_groups, unique_groups)
+  )
+  
+  # First add MDR group if present (will appear at the bottom)
+  if (has_mdr) {
     gt_table <- gt_table %>%
-      tab_row_group(label = i, row = label %in% sub_ab$names_ab)
+      tab_row_group(label = "MDR Status", rows = row_type == "level")
   }
+  
+  # Apply row grouping for each antibiotic group (in reverse order so first appears on top)
+  for (grp in ordered_groups) {
+    sub_ab <- ab_data %>% filter(groups_ab == grp)
+    if (nrow(sub_ab) > 0) {
+      gt_table <- gt_table %>%
+        tab_row_group(label = grp, rows = label %in% sub_ab$names_ab)
+    }
+  }
+  
+  # Style the row group headers
   gt_table %>%
     tab_style(style = cell_text(weight = "bold"), locations = cells_row_groups())
 }

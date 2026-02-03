@@ -178,20 +178,75 @@ select_antibiotic2group <- function(label, groups) {
   return(label %in% antibiotics_group$name)
 }
 
-add_group_antibiotic <- function(gt_table, list_ab)
+add_group_antibiotic <- function(gt_table, list_ab, has_mdr = FALSE)
 {
-  groups_ab <- ab_group(list_ab)
-  ab_data <- data.frame(list_ab, groups_ab)
-    names_ab <- format_antibiotic_label(list_ab)
-  groups_ab <- ab_group(names_ab)
-  ab_data <- data.frame(names_ab, groups_ab)
-  for (i in sort(unique(groups_ab), decreasing = TRUE))
-  {
-    sub_ab <- ab_data %>% filter(groups_ab == i)
-    gt_table <- gt_table %>%
-    tab_row_group(label = i, row = label %in% sub_ab$list_ab)
+  # Format antibiotic names for matching
+  names_ab <- format_antibiotic_label(list_ab)
+  
+  # Get antibiotic groups, handling NAs properly
+  groups_ab <- sapply(names_ab, function(ab) {
+    grp <- tryCatch({
+      result <- ab_group(ab, language = NULL)
+      if (length(result) == 0 || is.na(result)) NA_character_ else result
+    }, error = function(e) NA_character_)
+    
+    if (is.na(grp)) {
+      # Try to identify combination antibiotics
+      if (grepl("/", ab)) {
+        "Combination antibiotics"
+      } else {
+        "Other antibiotics"
+      }
+    } else {
+      grp
+    }
+  })
+  
+  ab_data <- data.frame(
+    names_ab = names_ab, 
+    groups_ab = as.character(groups_ab),
+    stringsAsFactors = FALSE
+  )
+  
+  # Remove any rows where group is still NA
+  ab_data <- ab_data %>% filter(!is.na(groups_ab))
+  
+  # Get unique groups and sort them alphabetically (descending for proper gt ordering)
+  # Put "Other antibiotics" and "Combination antibiotics" at the end
+  unique_groups <- unique(ab_data$groups_ab)
+  special_groups <- c("Combination antibiotics", "Other antibiotics")
+  regular_groups <- setdiff(unique_groups, special_groups)
+  ordered_groups <- c(
+    rev(sort(regular_groups)),
+    intersect(special_groups, unique_groups)
+  )
+  
+  # MDR level labels that need to be grouped under MDR Status
+  mdr_levels <- c("Negative", "Multi-drug-resistant (MDR)", 
+                  "Extensively drug-resistant (XDR)", 
+                  "Pandrug-resistant (PDR)", 
+                  "Not Determined")
+  
+  # Apply row grouping for each antibiotic group (in reverse order so first appears on top)
+  # Groups added first appear at the bottom, so we add MDR last to make it appear at the top
+  for (grp in ordered_groups) {
+    sub_ab <- ab_data %>% filter(groups_ab == grp)
+    if (nrow(sub_ab) > 0) {
+      gt_table <- gt_table %>%
+        tab_row_group(label = grp, rows = label %in% sub_ab$names_ab)
+    }
   }
-  gt_table %>% btab_row_group(label = i, row = label %in% sub_ab$names_ab)
+  
+  # Add MDR group last so it appears at the TOP of the table
+  # Match both the "MDR" variable name and all its level values
+  if (has_mdr) {
+    gt_table <- gt_table %>%
+      tab_row_group(label = "MDR Status", rows = (variable == "MDR") | (label %in% mdr_levels))
+  }
+  
+  # Style the row group headers
+  gt_table %>%
+    tab_style(style = cell_text(weight = "bold"), locations = cells_row_groups())
 }
 
 
@@ -256,6 +311,7 @@ build_ast_summary_table <- function(processed_data, mdr_data, pathogen_filter) {
   }
   
   list_ab <- setdiff(names(data_sub), c("Pathogen", "MDR"))
+  has_mdr <- "MDR" %in% names(data_sub)
   
   gt_table <- data_sub %>%
     tbl_summary(
@@ -265,7 +321,7 @@ build_ast_summary_table <- function(processed_data, mdr_data, pathogen_filter) {
       digits = everything() ~ c(1, 1)
     ) %>%
     modify_header(label = "") %>%
-    modify_column_indent(columns = label, row = label != "MDR") %>%
+    modify_column_indent(columns = label, rows = !(label %in% c("MDR"))) %>%
     modify_footnote(all_stat_cols() ~ "Resistant Percent (%), (Resistant case / Total)") %>%
     modify_table_body(~ .x %>%
                         mutate(
@@ -273,7 +329,7 @@ build_ast_summary_table <- function(processed_data, mdr_data, pathogen_filter) {
                           across(all_stat_cols(), ~ gsub("0\\.0 \\(NA%\\)", "-", .))
                         )) %>%
     as_gt() %>%
-    add_group_antibiotic(list_ab = list_ab)
+    add_group_antibiotic(list_ab = list_ab, has_mdr = has_mdr)
   
   return(gt_table)
 }

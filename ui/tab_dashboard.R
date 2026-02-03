@@ -1,197 +1,128 @@
-##### 1.1. Dashboard Tab #####
+##### Dashboard Tab #####
 tab_dashboard <- function() {
   nav_panel(
     title = "Dashboard",
-    icon = bsicons::bs_icon("graph-up"),
+    icon = bsicons::bs_icon("bar-chart"),
     
-    ##### Summary Cards Section #####
     div(
-      div(
-        class = "mb-4",
-        h3("Data Overview", class = "mb-4 text-primary fw-bold"),
-        div(
-          class = "row g-4",
-          div(
-            class = "col-12 col-md-6 col-lg-3",
-            value_box(
-              title = "Total Records",
-              value = textOutput("total_records"),
-              showcase = bsicons::bs_icon("file-earmark-ruled"),
-              class = "h-100",
-              style = "background-color: #D6E4FF !important; color: #003E8A !important; border: 1px solid #B8D4FF;"
-            )
-          ),
-          div(
-            class = "col-12 col-md-6 col-lg-3",
-            value_box(
-              title = "Total Patients",
-              value = textOutput("total_patients"),
-              showcase = bsicons::bs_icon("person-vcard"),
-              class = "h-100",
-              style = "background-color: #D3F9E8 !important; color: #096C5F !important; border: 1px solid #A8E6C7;"
-            )
-          ),
-          div(
-            class = "col-12 col-md-6 col-lg-3",
-            value_box(
-              title = "Total Samples",
-              value = textOutput("total_samples"),
-              showcase = bsicons::bs_icon("database"),
-              class = "h-100",
-              style = "background-color: #FFE5D0 !important; color: #A14C00 !important; border: 1px solid #FFD4A8;"
-            )
-          ),
-          div(
-            class = "col-12 col-md-6 col-lg-3",
-            value_box(
-              title = "Timelines",
-              value = textOutput("timeline"),
-              showcase = bsicons::bs_icon("calendar3"),
-              class = "h-100",
-              style = "background-color: #EAD7FF !important; color: #4B2C82 !important; border: 1px solid #D4BAFF;"
-            )
+      class = "p-3",
+      
+      ##### Row 1: Key Metrics #####
+      layout_columns(
+        col_widths = c(3, 3, 3, 3),
+        fill = FALSE,
+        
+        value_box(
+          title = "Total Records",
+          value = textOutput("total_records"),
+          theme = value_box_theme(bg = "#e8f4fd", fg = "#1565c0"),
+          showcase = bsicons::bs_icon("clipboard-data")
+        ),
+        value_box(
+          title = "Patients",
+          value = textOutput("total_patients"),
+          theme = value_box_theme(bg = "#e8f5e9", fg = "#2e7d32"),
+          showcase = bsicons::bs_icon("people")
+        ),
+        value_box(
+          title = "Samples",
+          value = textOutput("total_samples"),
+          theme = value_box_theme(bg = "#f3e5f5", fg = "#7b1fa2"),
+          showcase = bsicons::bs_icon("droplet")
+        ),
+        value_box(
+          title = "Date Range",
+          value = textOutput("timeline"),
+          theme = value_box_theme(bg = "#fff8e1", fg = "#f57c00"),
+          showcase = bsicons::bs_icon("calendar-range")
+        )
+      ),
+      
+      ##### Row 2: MDR Metrics #####
+      layout_columns(
+        col_widths = c(3, 3, 3, 3),
+        fill = FALSE,
+        class = "mt-3",
+        
+        value_box(
+          title = "MDR Isolates",
+          value = textOutput("mdr_count"),
+          theme = value_box_theme(bg = "#fff3e0", fg = "#e65100"),
+          showcase = bsicons::bs_icon("shield-exclamation")
+        ),
+        value_box(
+          title = "XDR Isolates",
+          value = textOutput("xdr_count"),
+          theme = value_box_theme(bg = "#ffebee", fg = "#c62828"),
+          showcase = bsicons::bs_icon("shield-x")
+        ),
+        value_box(
+          title = "MDR Rate",
+          value = textOutput("mdr_rate"),
+          theme = value_box_theme(bg = "#e0f2f1", fg = "#00695c"),
+          showcase = bsicons::bs_icon("percent")
+        ),
+        value_box(
+          title = "Top Resistant",
+          value = textOutput("top_resistant"),
+          theme = value_box_theme(bg = "#fce4ec", fg = "#ad1457"),
+          showcase = bsicons::bs_icon("bug")
+        )
+      ),
+      
+      ##### Row 3: Charts #####
+      layout_columns(
+        col_widths = c(8, 4),
+        fill = TRUE,
+        class = "mt-4",
+        
+        card(
+          full_screen = TRUE,
+          card_header("Pathogen Distribution"),
+          card_body(
+            plotlyOutput("pathogen_summary_plot", height = "350px")
+          )
+        ),
+        card(
+          full_screen = TRUE,
+          card_header("Sample Types"),
+          card_body(
+            plotlyOutput("sample_type_plot", height = "350px")
           )
         )
       ),
       
-      ##### Pathogen Summary Section #####
-      div(
-        class = "mb-4",
-        card(
-          class = "shadow-sm",
-          card_header(
-            div(
-              class = "d-flex justify-content-between align-items-center",
-              h4("Pathogen Distribution", class = "mb-0 text-primary fw-bold")
-            ),
-            class = "bg-light border-0"
-          ),
-          card_body(
-            plotlyOutput("pathogen_summary_plot", width = "100%", height = "450px"),
-            class = "p-3"
-          ),
-          style = "min-height: 500px;"
+      ##### Row 4: Trend Chart #####
+      card(
+        class = "mt-3",
+        full_screen = TRUE,
+        card_header("Resistance Trends Over Time"),
+        card_body(
+          plotlyOutput("resistance_trend_plot", height = "300px")
         )
       ),
       
-      ##### Resistance Patterns Section #####
+      ##### Row 5: Resistance Patterns #####
       card(
-        class = "shadow-sm",
-        card_header(
-          h4("Antimicrobial Resistance Patterns", class = "mb-0 text-primary fw-bold"),
-          class = "bg-light border-0"
-        ),
-        navset_card_tab(
-          id = "ast_card_tabs",
-          
-          ##### Gram-Negative Tab #####
-          nav_panel(
-            title = "Gram-Negative",
-            layout_sidebar(
-              sidebar = sidebar(
-                width = "300px",
-                open = "always",
-                class = "bg-light rounded p-3",
-                div(
-                  class = "mb-3",
-                  h5("Filter Options", class = "text-primary fw-bold mb-2"),
-                  p("Select pathogens to analyze resistance patterns", class = "text-muted small mb-3")
-                ),
-                virtualSelectInput(
-                  "list_gram_negative", "Pathogen Selection",
-                  choices = NULL, multiple = TRUE, search = TRUE,
-                  showValueAsTags = TRUE, placeholder = "Select pathogen(s)...",
-                  disableSelectAll = FALSE, optionsCount = 10
-                )
-              ),
-              div(
-                class = "flex-fill",
-                card(
-                  class = "h-100",
-                  card_header(
-                    div(
-                      class = "d-flex justify-content-between align-items-center",
-                      h5("Resistance Summary Table", class = "mb-0"),
-                      downloadButton("download_gram_neg", "Export Results", class = "btn btn-outline-primary btn-sm")
-                    )
-                  ),
-                  card_body(gt_output("ast_gram_negative_table"), class = "overflow-auto")
-                )
-              )
-            )
-          ),
-          
-          ##### Gram-Positive Tab #####
-          nav_panel(
-            title = "Gram-Positive",
-            layout_sidebar(
-              sidebar = sidebar(
-                width = "300px",
-                open = "always",
-                class = "bg-light rounded p-3",
-                div(
-                  class = "mb-3",
-                  h5("Filter Options", class = "text-primary fw-bold mb-2"),
-                  p("Select pathogens to analyze resistance patterns", class = "text-muted small mb-3")
-                ),
-                virtualSelectInput(
-                  "list_gram_positive", "Pathogen Selection",
-                  choices = NULL, multiple = TRUE, search = TRUE,
-                  showValueAsTags = TRUE, placeholder = "Select pathogen(s)...",
-                  disableSelectAll = FALSE, optionsCount = 10
-                )
-              ),
-              div(
-                class = "flex-fill",
-                card(
-                  class = "h-100",
-                  card_header(
-                    div(
-                      class = "d-flex justify-content-between align-items-center",
-                      h5("Resistance Summary Table", class = "mb-0"),
-                      downloadButton("download_gram_pos", "Export Results", class = "btn btn-outline-primary btn-sm")
-                    )
-                  ),
-                  card_body(gt_output("ast_gram_positive_table"), class = "overflow-auto")
-                )
-              )
-            )
-          ),
-          
-          ##### Fungal Tab #####
-          nav_panel(
-            title = "Fungal",
-            layout_sidebar(
-              sidebar = sidebar(
-                width = "300px",
-                open = "always",
-                class = "bg-light rounded p-3",
-                div(
-                  class = "mb-3",
-                  h5("Filter Options", class = "text-primary fw-bold mb-2"),
-                  p("Select pathogens to analyze resistance patterns", class = "text-muted small mb-3")
-                ),
-                virtualSelectInput(
-                  "list_fungal", "Pathogen Selection",
-                  choices = NULL, multiple = TRUE, search = TRUE,
-                  showValueAsTags = TRUE, placeholder = "Select pathogen(s)...",
-                  disableSelectAll = FALSE, optionsCount = 10
-                )
-              ),
-              div(
-                class = "flex-fill",
-                card(
-                  class = "h-100",
-                  card_header(
-                    div(
-                      class = "d-flex justify-content-between align-items-center",
-                      h5("Antifungal Resistance Summary", class = "mb-0"),
-                      downloadButton("download_fungal", "Export Results", class = "btn btn-outline-primary btn-sm")
-                    )
-                  ),
-                  card_body(gt_output("ast_fungal_table"), class = "overflow-auto")
-                )
-              )
+        class = "mt-3",
+        full_screen = TRUE,
+        card_header("Antimicrobial Resistance Patterns"),
+        card_body(
+          navset_underline(
+            nav_panel(
+              "Gram-negative", 
+              div(class = "mb-2", uiOutput("gram_neg_selector")),
+              gt_output("ast_gram_negative_table")
+            ),
+            nav_panel(
+              "Gram-positive", 
+              div(class = "mb-2", uiOutput("gram_pos_selector")),
+              gt_output("ast_gram_positive_table")
+            ),
+            nav_panel(
+              "Fungal", 
+              div(class = "mb-2", uiOutput("fungal_selector")),
+              gt_output("ast_fungal_table")
             )
           )
         )

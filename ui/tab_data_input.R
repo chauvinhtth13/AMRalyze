@@ -1,189 +1,119 @@
-#source("ui/card_data_preview.R", local = TRUE)
-
+##### Data Input Tab #####
 tab_data_input <- function() {
   nav_panel(
     title = "Data Input",
     icon = bsicons::bs_icon("upload"),
     
     layout_sidebar(
+      fillable = FALSE,  # Allow content to scroll naturally
       sidebar = sidebar(
-        width = "20%",
+        width = "320px",
+        open = TRUE,
         
-        ##### Step 1: File Upload #####
-        h5("Step 1: Upload Data File", class = "step-header required-field"),
-        p(
-          "Upload your antimicrobial susceptibility test data (CSV or Excel format)",
-          class = "info-text"
-        ),
-        fileInput(
-          "file_browse",
-          NULL,
-          accept = c(
-            "text/csv",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ##### Step 1: Upload #####
+        div(
+          class = "mb-3 p-3 bg-white border rounded",
+          h6(class = "fw-bold text-primary mb-3", "1. Upload File"),
+          fileInput(
+            "file_browse", NULL,
+            accept = c("text/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            buttonLabel = "Browse...",
+            placeholder = "CSV or Excel file"
           ),
-          buttonLabel = "Choose File",
-          placeholder = "No file selected (Max 10MB)"
+          uiOutput("sheet_selector"),
+          actionButton("btn_upload", "Load Data", class = "btn-outline-primary w-100 mt-2")
         ),
         
-        uiOutput("sheet_selector"),
+        ##### Step 2: Settings #####
+        div(
+          class = "mb-3 p-3 bg-white border rounded",
+          h6(class = "fw-bold text-primary mb-3", "2. Analysis Settings"),
+          virtualSelectInput(
+            "guideline", "Breakpoint Guideline",
+            choices = sort(unique(clinical_breakpoints$guideline)),
+            selected = get_newest_guideline(),
+            search = TRUE
+          ),
+          div(
+            class = "d-flex justify-content-between align-items-center mt-3",
+            span("Calculate MDR", class = "small fw-medium"),
+            switchInput("MDR_cal", value = TRUE, size = "mini", onLabel = "Yes", offLabel = "No")
+          )
+        ),
         
-        # Upload button
+        ##### Step 3: Mapping #####
+        div(
+          class = "mb-3 p-3 bg-white border rounded",
+          h6(class = "fw-bold text-primary mb-3", "3. Column Mapping"),
+          
+          tags$small(class = "text-muted fw-bold d-block mb-2", "IDENTIFIERS"),
+          virtualSelectInput("NoID", "Row ID", choices = NULL, placeholder = "Optional", search = TRUE),
+          virtualSelectInput("PID", "Patient ID", choices = NULL, placeholder = "Optional", search = TRUE),
+          virtualSelectInput("SID", "Sample ID", choices = NULL, placeholder = "Optional", search = TRUE),
+          
+          hr(class = "my-3"),
+          
+          tags$small(class = "text-muted fw-bold d-block mb-2", "SAMPLE INFO"),
+          virtualSelectInput("Sample_Date", "Date", choices = NULL, placeholder = "Optional", search = TRUE),
+          virtualSelectInput("Sample_Type", "Sample Type", choices = NULL, placeholder = "Optional", search = TRUE),
+          virtualSelectInput(
+            "Pathogen", 
+            tags$span("Pathogen ", tags$span(class = "text-danger", "*")), 
+            choices = NULL, 
+            placeholder = "Required", 
+            search = TRUE
+          ),
+          
+          hr(class = "my-3"),
+          
+          tags$small(class = "text-muted fw-bold d-block mb-2", "AST COLUMNS"),
+          virtualSelectInput(
+            "AB_cols", "Antibiotic Columns",
+            choices = NULL, multiple = TRUE, showValueAsTags = TRUE,
+            placeholder = "Select columns...", optionsCount = 12
+          )
+        ),
+        
+        ##### Process Button #####
         actionButton(
-          "btn_upload",
-          "Upload Data",
-          class = "btn-primary w-100",
-          icon = icon("eye")
-        ),
-        
-        hr(),
-        
-        ##### Step 2: Configure Analysis #####
-        h5("Step 2: Analysis Configuration", class = "step-header"),
-        
-        virtualSelectInput(
-          "guideline",
-          tags$strong("Clinical breakpoint guidelines"),
-          choices = sort(unique(clinical_breakpoints$guideline)),
-          selected = get_newest_guideline(),
-          multiple = FALSE,
-          search = TRUE,
-          placeholder = "Select row number or record index column"
-        ),
-        
-        p(
-          tags$strong("Multi-Drug Resistant Calculated", class = "required-field")
-        ),
-        radioButtons(
-          inputId = "MDR_cal",
-          label = NULL,
-          choices = c("Yes" = TRUE, "No" = FALSE),
-          selected = TRUE,
-          inline = TRUE
-        ),
-        
-        hr(),
-        
-        ##### Step 3: Column Mapping #####
-        h5("Step 3: Column Mapping", class = "step-header"),
-        p(
-          "Assign the appropriate columns from your uploaded dataset to the required fields below. Fields marked with * are mandatory.",
-          class = "info-text"
-        ),
-        
-        h6("Select at least one identifier column", style = "color: #0d6efd; font-weight: bold;"),
-        
-        virtualSelectInput(
-          "NoID",
-          tags$strong("No. Column"),
-          choices = NULL,
-          multiple = FALSE,
-          search = TRUE,
-          hideClearButton = FALSE,
-          placeholder = "Select row number or record index column"
-        ),
-        
-        virtualSelectInput(
-          "PID",
-          tags$strong("Patient ID Column"),
-          choices = NULL,
-          multiple = FALSE,
-          search = TRUE,
-          hideClearButton = FALSE,
-          placeholder = "Select column containing patient ID"
-        ),
-        
-        virtualSelectInput(
-          "SID",
-          tags$strong("Sample ID Column"),
-          choices = NULL,
-          multiple = FALSE,
-          search = TRUE,
-          hideClearButton = FALSE,
-          placeholder = "Select column containing sample ID"
-        ),
-        
-        h6("Select sample metadata fields", style = "color: #0d6efd; font-weight: bold;"),
-        
-        p(
-          "Please ensure you select the Organism/Pathogen column below. This is a required field for downstream analysis.",
-          class = "info-text"
-        ),
-        
-        virtualSelectInput(
-          "Sample_Date",
-          tags$strong("Sampling Date Column"),
-          choices = NULL,
-          multiple = FALSE,
-          search = TRUE,
-          showValueAsTags = TRUE,
-          hideClearButton = FALSE,
-          placeholder = "Select sampling date column (optional)"
-        ),
-        
-        virtualSelectInput(
-          "Sample_Type",
-          tags$strong("Sample Type Column"),
-          choices = NULL,
-          multiple = FALSE,
-          search = TRUE,
-          showValueAsTags = TRUE,
-          hideClearButton = FALSE,
-          placeholder = "Select specimen type column (optional)"
-        ),
-        
-        virtualSelectInput(
-          "Pathogen",
-          tags$strong("Organism/Pathogen Column *"),
-          choices = NULL,
-          multiple = FALSE,
-          search = TRUE,
-          hideClearButton = FALSE,
-          placeholder = "Select column containing pathogen or organism name"
-        ),
-        
-        h6("Antibiotic Susceptibility Test (AST) Results", style = "color: #0d6efd; font-weight: bold;"),
-        
-        virtualSelectInput(
-          "AB_cols",
-          NULL,
-          choices = NULL,
-          multiple = TRUE,
-          search = TRUE,
-          showValueAsTags = TRUE,
-          placeholder = "Select all columns containing antibiotic test results",
-          optionsCount = 12
-        ),
-        
-        hr(),
-        
-        actionButton(
-          "btn_process",
-          "Process Data",
-          class = "btn-success w-100",
-          style = "height: 50px; font-size: 16px;",
+          "btn_process", "Process Data", 
+          class = "btn-primary w-100 py-2",
           icon = icon("cogs")
         )
       ),
+      
+      ##### Main Content Area #####
+      # Warnings and Summary
+      uiOutput("unrecognized_ab_card"),
+      uiOutput("processing_warnings_card"),
+      uiOutput("processing_summary_card"),
+      
+      # AST Data Card
       card(
-        card_header(div(
-          h6("Overview AST Data", class = "mb-0"),
-          span(
-            downloadButton("download_ast_data", "Download AST Data", class = "btn-outline-success btn-sm"),
-            style = "float: right;"
-          )
-        ), class = "bg-light"),
-        card_body(dataTableOutput("data_AST_Table"))
+        class = "mb-3",
+        full_screen = TRUE,
+        card_header(
+          class = "d-flex justify-content-between align-items-center",
+          span("AST Data", class = "fw-bold"),
+          downloadButton("download_ast_data", "Export CSV", class = "btn-outline-success btn-sm")
+        ),
+        card_body(
+          DTOutput("data_AST_Table")
+        )
       ),
+      
+      # MDR Data Card
       card(
-        card_header(div(
-          h6("Overview MDR Data", class = "mb-0"),
-          span(
-            downloadButton("download_mdr_data", "Download MDR Data", class = "btn-outline-success btn-sm"),
-            style = "float: right;"
-          )
-        ), class = "bg-light"),
-        card_body(dataTableOutput("data_MDR_Table"))
+        class = "mb-3",
+        full_screen = TRUE,
+        card_header(
+          class = "d-flex justify-content-between align-items-center",
+          span("MDR Analysis", class = "fw-bold"),
+          downloadButton("download_mdr_data", "Export CSV", class = "btn-outline-success btn-sm")
+        ),
+        card_body(
+          DTOutput("data_MDR_Table")
+        )
       )
     )
   )
