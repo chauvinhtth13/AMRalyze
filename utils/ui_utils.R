@@ -1,3 +1,94 @@
+css_function <- function() {
+  tags$head(
+    shinyjs::useShinyjs(),
+    tags$style(HTML("#file_browse_progress.progress { display: none !important; }")),
+    tags$script(HTML(
+      # JavaScript for enabling Shift+Click range selection in VirtualSelect input 'AB_cols'
+      "$(document).on('shiny:connected', function(event) {
+         var vsInputId = 'AB_cols';
+         var lastSelectedIndex = -1;
+         var virtualSelectElement = document.getElementById(vsInputId);
+
+         if (virtualSelectElement && virtualSelectElement.virtualSelect) {
+             $(virtualSelectElement).on('click', '.vscomp-option', function(e) {
+                 var clickedOption = $(this);
+                 var currentIndex = clickedOption.data('index');
+                 // console.log('Clicked index:', currentIndex, 'Shift:', e.shiftKey, 'Last:', lastSelectedIndex);
+
+                 if (e.shiftKey && lastSelectedIndex !== -1) {
+                     e.preventDefault(); // Prevent default toggle behaviour
+                     var start = Math.min(lastSelectedIndex, currentIndex);
+                     var end = Math.max(lastSelectedIndex, currentIndex);
+                     var optionsToSelect = [];
+                     var currentValues = virtualSelectElement.virtualSelect.getSelectedValue(); // Get already selected values
+
+                     // Iterate through visible options to find those in the range
+                     $(virtualSelectElement).find('.vscomp-option').each(function() {
+                         var idx = $(this).data('index');
+                         var val = $(this).data('value');
+                         if (idx >= start && idx <= end) {
+                            // Add to selection (avoid duplicates if already selected)
+                            if (!optionsToSelect.includes(val)) {
+                                optionsToSelect.push(val);
+                            }
+                         }
+                     });
+
+                     // Combine newly selected range with previously selected items OUTSIDE the range
+                     // This mimics standard shift-click behaviour (adds range to existing selection)
+                     var finalSelection = Array.from(new Set([...currentValues, ...optionsToSelect]));
+
+                     // Use VirtualSelect API to set the value
+                     virtualSelectElement.virtualSelect.setValue(finalSelection);
+                     // console.log('Range selected:', optionsToSelect, 'Final Selection:', finalSelection);
+
+                     // Update lastSelectedIndex to the end of the range clicked
+                     lastSelectedIndex = currentIndex;
+
+                 } else {
+                     // Regular click (not shift or first click) - update last selected index
+                     lastSelectedIndex = currentIndex;
+                 }
+             });
+         } else {
+             console.error('Could not find Virtual Select instance for:', vsInputId);
+         }
+     });"
+    ))
+  )
+}
+
+
+
+detect_column <- function(original_headers, patterns) {
+
+  # Store original headers to return the correct value later
+  headers_original_case <- original_headers # Keep the original casing
+  
+  # Prepare headers and patterns for matching (lowercase, space for underscore)
+  headers_processed <- tolower(original_headers)
+  patterns_processed <- paste0("\\b", tolower(patterns), "\\b") # Add word boundaries
+
+  regex_pattern <- paste(patterns_processed, collapse = "|")
+  
+  # Find indices of matches in the processed headers
+  matches_indices <- grep(regex_pattern, headers_processed, ignore.case = FALSE) # ignore.case=FALSE because already lowercased
+  
+  if (length(matches_indices) > 0) {
+    # Return the header with the original casing
+    return(headers_original_case[matches_indices[1]])
+  } else {
+    # Return NULL if no match is found
+    return(NULL)
+  }
+}
+
+get_newest_guideline <- function()
+{
+  data_guideline <- str_split_i(clinical_breakpoints$guideline," ",2)
+  paste("CLSI",max(as.numeric(data_guideline),na.rm =TRUE))
+}
+
 ##### Tranform Symbol MIC####
 tran_symbol <- function(x)
 {
@@ -19,7 +110,6 @@ mic_x_cal <- function(list_mic, x = 0.5)
   mic_x <- tran_symbol(mic_x)
   return(mic_x)
 }
-
 ##### MIC Min-Max #####
 min_max_mic <- function(list_mic)
 {
@@ -121,7 +211,7 @@ plot_multi_mic <- function(data_freq, data_quantile)
         name = "Number of isolate",
         labels = function(y)
           round(y * sum_count, 0),
-        sec.axis = sec_axis( ~ . , labels = percent_format(), name = "Cumulative Probability")
+        sec.axis = sec_axis(~ . , labels = percent_format(), name = "Cumulative Probability")
       ) +
       scale_x_discrete(
         labels = function(x)
@@ -172,28 +262,26 @@ format_antibiotic_label <- function(x)
   return(x)
 }
 
-select_antibiotic2group <- function(label, groups) {
-  antibiotics_group <- antibiotics %>% select(name, group) %>%
+select_antibiotic2group <- function(label, groups){
+  antibiotics_group <- antibiotics %>% select(name,group) %>%
     mutate(name = str_to_title(name)) %>% filter(group == groups)
   return(label %in% antibiotics_group$name)
 }
 
 add_group_antibiotic <- function(gt_table, list_ab)
 {
-  groups_ab <- ab_group(list_ab)
-  ab_data <- data.frame(list_ab, groups_ab)
-    names_ab <- format_antibiotic_label(list_ab)
+  names_ab <- format_antibiotic_label(list_ab)
   groups_ab <- ab_group(names_ab)
-  ab_data <- data.frame(names_ab, groups_ab)
-  for (i in sort(unique(groups_ab), decreasing = TRUE))
+  ab_data <- data.frame(names_ab,groups_ab)
+  for (i in sort(unique(groups_ab),decreasing = TRUE))
   {
     sub_ab <- ab_data %>% filter(groups_ab == i)
     gt_table <- gt_table %>%
-    tab_row_group(label = i, row = label %in% sub_ab$list_ab)
+      tab_row_group(label = i, row = label %in% sub_ab$names_ab)
   }
-  gt_table %>% btab_row_group(label = i, row = label %in% sub_ab$names_ab)
+  gt_table %>%
+    tab_style(style = cell_text(weight = "bold"), locations = cells_row_groups())
 }
-
 
 binary2gene <- function(x, n, list_gen)
 {
@@ -210,93 +298,4 @@ binary2gene <- function(x, n, list_gen)
     encode <- "None"
   }
   return(encode)
-}
-
-##### Reusable AST Table Builder #####
-# Creates a standardized gt table for AST data by organism group
-# @param processed_data The processed AST data
-# @param mdr_data The MDR calculated data (can be NULL)
-# @param pathogen_filter Vector of pathogen names to filter
-# @return A gt table object
-build_ast_summary_table <- function(processed_data, mdr_data, pathogen_filter) {
-  if (is.null(mdr_data)) {
-    # When no MDR data, we need to deduplicate by method priority
-    # Priority: MIC > E-Test > Disk (use Method_Priority column if exists)
-    data_sub <- processed_data %>%
-      filter(!is.na(Interpretation)) %>%
-      filter(Pathogen %in% pathogen_filter)
-    
-    # If Method_Priority exists, use it to keep best result per antibiotic
-    if ("Method_Priority" %in% names(data_sub)) {
-      data_sub <- data_sub %>%
-        group_by(across(any_of(c("NoID", "PatientID", "SampleID", "Pathogen", "ab_code")))) %>%
-        slice_min(Method_Priority, n = 1, with_ties = FALSE) %>%
-        ungroup()
-    }
-    
-    data_sub <- data_sub %>%
-      select(any_of(c("NoID", "PatientID", "SampleID", "Pathogen", "ab_code", "Interpretation"))) %>%
-      tidyr::pivot_wider(
-        names_from = ab_code,
-        values_from = Interpretation,
-        values_fn = first  # Handle any remaining duplicates
-      ) %>%
-      select(-c(any_of(c("NoID", "PatientID", "SampleID")))) %>%
-      select(where(~ !all(is.na(.)))) %>%
-      rename_if(is.sir, ab_name) %>%
-      mutate_if(is.sir, .funs = function(x) if_else(x == "R", TRUE, FALSE))
-  } else {
-    # MDR data already has deduplicated interpretations
-    data_sub <- mdr_data %>%
-      filter(Pathogen %in% pathogen_filter) %>%
-      select(-c(any_of(c("NoID", "PatientID", "SampleID", "SampleType", "SampleDate", "mo_code", "kingdom", "gram_stain")))) %>%
-      select(where(~ !all(is.na(.)))) %>%
-      rename_if(is.sir, ab_name) %>%
-      mutate_if(is.sir, .funs = function(x) if_else(x == "R", TRUE, FALSE))
-  }
-  
-  list_ab <- setdiff(names(data_sub), c("Pathogen", "MDR"))
-  
-  gt_table <- data_sub %>%
-    tbl_summary(
-      by = Pathogen,
-      statistic = everything() ~ "{p}% ({n}/{N})",
-      missing = "no",
-      digits = everything() ~ c(1, 1)
-    ) %>%
-    modify_header(label = "") %>%
-    modify_column_indent(columns = label, row = label != "MDR") %>%
-    modify_footnote(all_stat_cols() ~ "Resistant Percent (%), (Resistant case / Total)") %>%
-    modify_table_body(~ .x %>%
-                        mutate(
-                          across(all_stat_cols(), ~ gsub("^NA.*0.0/0.0)", "-", .)),
-                          across(all_stat_cols(), ~ gsub("0\\.0 \\(NA%\\)", "-", .))
-                        )) %>%
-    as_gt() %>%
-    add_group_antibiotic(list_ab = list_ab)
-  
-  return(gt_table)
-}
-
-##### Get Pathogen List by Organism Group #####
-# @param processed_data The processed AST data
-# @param kingdom_filter Filter for kingdom (e.g., "Bacteria", "Fungi")
-# @param gram_stain_filter Filter for gram stain (e.g., "Gram-negative", "Gram-positive")
-# @return Vector of pathogen names sorted by frequency
-get_pathogen_list <- function(processed_data, kingdom_filter = NULL, gram_stain_filter = NULL) {
-  result <- processed_data %>%
-    select(any_of(c("NoID", "PatientID", "SampleID", "Pathogen", "kingdom", "gram_stain"))) %>%
-    unique()
-  
-  if (!is.null(kingdom_filter)) {
-    result <- result %>% filter(kingdom == kingdom_filter)
-  }
-  
-  if (!is.null(gram_stain_filter)) {
-    result <- result %>% filter(gram_stain == gram_stain_filter)
-  }
-  
-  result %>%
-    count(Pathogen, sort = TRUE, name = "Frequency") %>%
-    pull(Pathogen)
 }
