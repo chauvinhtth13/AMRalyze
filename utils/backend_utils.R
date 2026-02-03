@@ -54,3 +54,8 @@ get_newest_guideline <- function()
   data_guideline <- str_split_i(clinical_breakpoints$guideline, " ", 2)
   paste("CLSI", max(as.numeric(data_guideline), na.rm = TRUE))
 }
+
+# Alias for showNotification to maintain consistency
+show_notification <- function(message, type = "error", duration = 5) {
+  showNotification(message, type = type, duration = duration)
+}

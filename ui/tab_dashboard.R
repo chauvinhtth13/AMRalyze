@@ -131,13 +131,14 @@ tab_dashboard <- function() {
                 class = "bg-light rounded p-3",
                 div(
                   class = "mb-3",
-                  h5("Filter Options", class = "text-primary fw-bold mb-2")
+                  h5("Filter Options", class = "text-primary fw-bold mb-2"),
+                  p("Select pathogens to analyze resistance patterns", class = "text-muted small mb-3")
                 ),
                 virtualSelectInput(
                   "list_gram_positive", "Pathogen Selection",
                   choices = NULL, multiple = TRUE, search = TRUE,
                   showValueAsTags = TRUE, placeholder = "Select pathogen(s)...",
-                  disableSelectAll = FALSE
+                  disableSelectAll = FALSE, optionsCount = 10
                 )
               ),
               div(
@@ -167,13 +168,14 @@ tab_dashboard <- function() {
                 class = "bg-light rounded p-3",
                 div(
                   class = "mb-3",
-                  h5("Filter Options", class = "text-primary fw-bold mb-2")
+                  h5("Filter Options", class = "text-primary fw-bold mb-2"),
+                  p("Select pathogens to analyze resistance patterns", class = "text-muted small mb-3")
                 ),
                 virtualSelectInput(
                   "list_fungal", "Pathogen Selection",
                   choices = NULL, multiple = TRUE, search = TRUE,
                   showValueAsTags = TRUE, placeholder = "Select pathogen(s)...",
-                  disableSelectAll = FALSE
+                  disableSelectAll = FALSE, optionsCount = 10
                 )
               ),
               div(

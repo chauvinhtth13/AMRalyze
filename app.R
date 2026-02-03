@@ -14,7 +14,6 @@ library(bsicons)
 library(tidyverse)    # dplyr, tidyr, stringr, purrr, readr, etc.
 library(magrittr)     # Pipe operators
 library(data.table)   # High-performance data manipulation
-library(reshape2)     # Data reshaping
 library(scales)       # Formatting scales and axes
 
 # Antimicrobial resistance (AMR) analysis tools
@@ -83,7 +82,7 @@ ui <- page_navbar(
   header = tags$head(
     useShinyjs(),
     includeCSS("www/styles.css"),
-    tags$script(src = "www/features.js"),
+    tags$script(src = "features.js"),
     tags$meta(name = "viewport", content = "width=device-width, initial-scale=1.0")
   ),
   
@@ -117,7 +116,7 @@ server <- function(input, output, session) {
         error = function(e) character(0)
       )
       if (length(sheets) == 0) {
-        showNotification("Không tìm thấy sheet trong file Excel này!", type = "error")
+        showNotification("No sheets found in this Excel file!", type = "error")
         return(NULL)
       }
       virtualSelectInput("sheet_name", "Select Excel Sheet:", choices = sheets, selected = sheets[1])
@@ -129,7 +128,7 @@ server <- function(input, output, session) {
     
     if (input$file_browse$size > MAX_FILE_SIZE_BYTES) {
       showNotification(
-        paste("Kích thước vượt", MAX_FILE_SIZE_MB, "MB"),
+        paste("File size exceeds", MAX_FILE_SIZE_MB, "MB limit"),
         type = "error",
         duration = 8
       )
@@ -167,16 +166,16 @@ server <- function(input, output, session) {
     if (is.null(df)) {
       return() # Error already handled in read_file
     } else if (ncol(df) == 0) {
-      show_notification("Dữ liệu rỗng.", duration = 8)
+      showNotification("Data is empty.", type = "error", duration = 8)
     } else {
       meta_data$uploaded_data <- df
       mapping_list <- list(
-        NoID = c("No", "No."),
-        PID          = c("PID", "Patient ID", "patient_id", "subject_id"),
-        SID          = c("SID", "Sample ID", "sample_id", "specimen_id"),
-        Sample_Date  = c("Sample Date", "collection_date", "sampling_date"),
-        Sample_Type  = c("Sample Type", "sample_type", "source"),
-        Pathogen     = c("Pathogen", "Bacteria", "organism"),
+        NoID = c("No", "No.", "study_id", "record_id"),
+        PID          = c("PID", "Patient ID", "patient_id", "subject_id", "pid"),
+        SID          = c("SID", "Sample ID", "sample_id", "specimen_id", "sid"),
+        Sample_Date  = c("Sample Date", "collection_date", "sampling_date", "date_sampling", "sample_date"),
+        Sample_Type  = c("Sample Type", "sample_type", "source", "specimen_type"),
+        Pathogen     = c("Pathogen", "Bacteria", "organism", "bacteria", "microorganism"),
         AB_cols      = c(antimicrobials$name, antimicrobials$ab)
       )
       
@@ -228,9 +227,13 @@ server <- function(input, output, session) {
                      provided_names <- names(provided_map)
                      
                      incProgress(0.1, detail = "Preparing data columns...")
+                     
+                     # Build rename vector for mapping original columns to standard names
+                     rename_vec <- setNames(provided_cols, provided_names)
+                     
                      df_processed <- meta_data$uploaded_data %>%
                        select(any_of(provided_cols), any_of(input$AB_cols)) %>%
-                       #mutate(!!!set_names(rep(list(""), length(missing_keys)), missing_keys)) %>%
+                       rename(any_of(rename_vec)) %>%
                        pivot_longer(
                          cols       = all_of(input$AB_cols),
                          names_to   = c("Antibiotic_Name", "Method_init"),
@@ -239,7 +242,7 @@ server <- function(input, output, session) {
                          values_drop_na = TRUE
                        )
                      
-                     incProgress(0.2, detail = "Preparing AST guildeline ...")
+                     incProgress(0.2, detail = "Preparing AST guideline ...")
                      df_processed <- df_processed %>%
                        mutate(
                          TempInterpretation = str_extract(Result, "R|S|I|SSD|NI"),
@@ -251,7 +254,15 @@ server <- function(input, output, session) {
                          Method = case_when(
                            str_detect(Method_init, "\\bND") ~ "Disk",
                            str_detect(Method_init, "\\bNE") ~ "E-Test",
+                           str_detect(Method_init, "\\bNM") ~ "MIC",
                            TRUE                             ~ "MIC"
+                         ),
+                         # Assign priority: MIC=1, E-Test=2, Disk=3 (lower is better)
+                         Method_Priority = case_when(
+                           Method == "MIC" ~ 1L,
+                           Method == "E-Test" ~ 2L,
+                           Method == "Disk" ~ 3L,
+                           TRUE ~ 4L
                          ),
                          Value  = str_extract(Result, "(<=|>=|<|>)?\\s*[0-9.]+"),
                          MIC    = if_else(Method %in% c("E-Test", "MIC"), Value, NA_character_),
@@ -270,6 +281,7 @@ server <- function(input, output, session) {
                            ab = ab_code,
                            guideline = input$guideline
                          ),
+                         # Priority: Direct interpretation > MIC/E-Test > Disk
                          Interpretation = case_when(
                            !is.na(TempInterpretation) ~ as.sir(TempInterpretation),
                            !is.na(InterpretationMIC) ~ as.sir(InterpretationMIC),
@@ -291,16 +303,27 @@ server <- function(input, output, session) {
                            NULL
                          }
                        ) %>%
-                       select(-c(Method_init, Result, Value, TempInterpretation,Antibiotic_Name))
+                       select(-c(Method_init, Result, Value, TempInterpretation, Antibiotic_Name))
                      meta_data$processed_data <- df_processed
                      ##### 2.1.4.3 Calculating MDR columns #####
                      if (input$MDR_cal) {
                        incProgress(0.4, detail = "Calculating MDR status...")
-                       mdr_data <- df_processed %>% filter(!is.na(Interpretation)) %>%
+                       
+                       # For MDR: Keep only best interpretation per sample/antibiotic
+                       # Priority: MIC > E-Test > Disk (use Method_Priority)
+                       mdr_input <- df_processed %>%
+                         filter(!is.na(Interpretation)) %>%
+                         group_by(across(all_of(c(provided_names, "mo_code", "kingdom", "gram_stain", "ab_code")))) %>%
+                         # Keep the row with highest priority method (lowest Method_Priority value)
+                         slice_min(Method_Priority, n = 1, with_ties = FALSE) %>%
+                         ungroup()
+                       
+                       mdr_data <- mdr_input %>%
                          tidyr::pivot_wider(
-                           id_cols = c(provided_names, mo_code, kingdom, gram_stain),
+                           id_cols = c(all_of(provided_names), mo_code, kingdom, gram_stain),
                            names_from = ab_code,
-                           values_from = Interpretation
+                           values_from = Interpretation,
+                           values_fn = first  # In case of remaining ties, take first
                          ) %>% mutate(
                            MDR = mdro(
                              guideline = "CMI2012",
@@ -383,7 +406,7 @@ server <- function(input, output, session) {
       if ("PatientID" %in% names(meta_data$processed_data)) {
         scales::comma(n_distinct(meta_data$processed_data$PatientID, na.rm = TRUE))
       } else {
-        "No PatientID collumn"
+        "No PatientID column"
       }
     }
   })
@@ -397,7 +420,7 @@ server <- function(input, output, session) {
       if ("SampleID" %in% names(meta_data$processed_data)) {
         scales::comma(n_distinct(meta_data$processed_data$SampleID, na.rm = TRUE))
       } else {
-        "No SampleID collumn"
+        "No SampleID column"
       }
     }
   })
@@ -411,7 +434,7 @@ server <- function(input, output, session) {
       if ("SampleDate" %in% names(meta_data$processed_data)) {
         paste(min(meta_data$processed_data$SampleDate), "to", max(meta_data$processed_data$SampleDate))
       } else {
-        "No Date collumn"
+        "No Date column"
       }
     }
   })
@@ -428,7 +451,7 @@ server <- function(input, output, session) {
     )
     
     pathogen_freq <- meta_data$processed_data %>%
-      select(any_of(c("No", "PatientID", "SampleID", "Pathogen"))) %>% 
+      select(any_of(c("NoID", "PatientID", "SampleID", "Pathogen"))) %>% 
       unique() %>%
       dplyr::count(Pathogen, sort = TRUE, name = "Frequency")
     
@@ -471,17 +494,16 @@ server <- function(input, output, session) {
   
   observe({
     req(meta_data$processed_data)
-    list_gram_negative <- meta_data$processed_data %>%
-      select(any_of(c("No", "PatientID", "SampleID", "Pathogen","kingdom","gram_stain"))) %>%
-      unique() %>%
-      dplyr::filter(kingdom == "Bacteria" &
-                      gram_stain == "Gram-negative") %>%
-      dplyr::count(Pathogen, sort = TRUE, name = "Frequency") %>%
-      pull(Pathogen)
+    list_gram_negative <- get_pathogen_list(
+      meta_data$processed_data,
+      kingdom_filter = "Bacteria",
+      gram_stain_filter = "Gram-negative"
+    )
 
     selected_choice <- if (length(list_gram_negative) >= 4) {
-      # Use the value from the original vector for selection logic
       list_gram_negative[1:4]
+    } else if (length(list_gram_negative) > 0) {
+      list_gram_negative
     } else {
       NULL
     }
@@ -494,93 +516,147 @@ server <- function(input, output, session) {
     )
   })
   
+  ##### Gram-Positive Observer #####
+  observe({
+    req(meta_data$processed_data)
+    list_gram_positive <- get_pathogen_list(
+      meta_data$processed_data,
+      kingdom_filter = "Bacteria",
+      gram_stain_filter = "Gram-positive"
+    )
+
+    selected_choice <- if (length(list_gram_positive) >= 4) {
+      list_gram_positive[1:4]
+    } else if (length(list_gram_positive) > 0) {
+      list_gram_positive
+    } else {
+      NULL
+    }
+
+    updateVirtualSelect(
+      session = session,
+      inputId = "list_gram_positive",
+      choices = list_gram_positive,
+      selected = selected_choice
+    )
+  })
+  
+  ##### Fungal Observer #####
+  observe({
+    req(meta_data$processed_data)
+    list_fungal <- get_pathogen_list(
+      meta_data$processed_data,
+      kingdom_filter = "Fungi"
+    )
+
+    selected_choice <- if (length(list_fungal) >= 4) {
+      list_fungal[1:4]
+    } else if (length(list_fungal) > 0) {
+      list_fungal
+    } else {
+      NULL
+    }
+
+    updateVirtualSelect(
+      session = session,
+      inputId = "list_fungal",
+      choices = list_fungal,
+      selected = selected_choice
+    )
+  })
+  
   output$ast_gram_negative_table <- render_gt({
     validate(need(
-      meta_data$uploaded_data,
+      meta_data$processed_data,
       "Please upload and process data first ('Input' tab)."
     ))
     validate(need(
       length(input$list_gram_negative) > 0,
       "Choose Gram-negative Pathogen."
     ))
-    if(is.null(meta_data$mdr_data))
-    {
-      data_sub <- meta_data$processed_data %>% 
-        filter(!is.na(Interpretation)) %>%
-        filter(Pathogen %in% input$list_gram_negative) %>%
-        select(any_of(
-          c(
-            "No",
-            "PatientID",
-            "SampleID",
-            "Pathogen",
-            "ab_code",
-            "Interpretation"
-          )
-        )) %>%
-        tidyr::pivot_wider(
-          names_from = ab_code,
-          values_from = Interpretation
-        ) %>%  select(-c(any_of(
-          c(
-            "No",
-            "PatientID",
-            "SampleID"
-          )
-        ))) %>%
-        select(where(~ !all(is.na(.)))) %>%
-        rename_if(is.sir, ab_name) %>%
-        mutate_if(
-          is.sir,
-          .funs = function(x)
-            if_else(x == "R", TRUE, FALSE)
-        )
-    } else {
-      data_sub <- meta_data$mdr_data %>%
-        filter(Pathogen %in% input$list_gram_negative) %>%
-        select(-c(any_of(
-          c(
-            "No",
-            "PatientID",
-            "SampleID",
-            "SampleType",
-            "SampleDate",
-            "mo_code",
-            "kingdom",
-            "gram_stain"
-          )
-        ))) %>%
-        select(where(~ !all(is.na(.)))) %>%
-        rename_if(is.sir, ab_name) %>%
-        mutate_if(
-          is.sir,
-          .funs = function(x)
-            if_else(x == "R", TRUE, FALSE)
-        )
-    }
-
-    list_ab <- setdiff(names(data_sub), c("Pathogen", "MDR"))
-
-
-    gt_table <- data_sub %>%
-      tbl_summary(
-        by = Pathogen,
-        statistic = everything() ~ "{p}% ({n}/{N})",
-        missing = "no",
-        digits = everything() ~ c(1, 1)
-      ) %>%
-      modify_header(label = "") %>%
-      modify_column_indent(columns = label, row = label != "MDR") %>%
-      modify_footnote(all_stat_cols() ~ "Resitant Percent (%), (Resitant case / Total) ") %>%
-      modify_table_body(~ .x %>%
-                          mutate(
-                            across(all_stat_cols(), ~ gsub("^NA.*0.0/0.0)", "-", .)),
-                            across(all_stat_cols(), ~ gsub("0\\.0 \\(NA%\\)", "-", .))
-                          )) %>%
-      as_gt() %>%
-      add_group_antibiotic(list_ab = list_ab)
-    return(gt_table)
+    
+    build_ast_summary_table(
+      meta_data$processed_data,
+      meta_data$mdr_data,
+      input$list_gram_negative
+    )
   })
+  
+  ##### Gram-Positive Table #####
+  output$ast_gram_positive_table <- render_gt({
+    validate(need(
+      meta_data$processed_data,
+      "Please upload and process data first ('Input' tab)."
+    ))
+    validate(need(
+      length(input$list_gram_positive) > 0,
+      "Choose Gram-positive Pathogen."
+    ))
+    
+    build_ast_summary_table(
+      meta_data$processed_data,
+      meta_data$mdr_data,
+      input$list_gram_positive
+    )
+  })
+  
+  ##### Fungal Table #####
+  output$ast_fungal_table <- render_gt({
+    validate(need(
+      meta_data$processed_data,
+      "Please upload and process data first ('Input' tab)."
+    ))
+    validate(need(
+      length(input$list_fungal) > 0,
+      "Choose Fungal Pathogen."
+    ))
+    
+    build_ast_summary_table(
+      meta_data$processed_data,
+      meta_data$mdr_data,
+      input$list_fungal
+    )
+  })
+  
+  ##### Download Handlers for AST Tables #####
+  output$download_gram_neg <- downloadHandler(
+    filename = function() {
+      paste0("Gram_Negative_AST_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      req(meta_data$processed_data, input$list_gram_negative)
+      data <- meta_data$processed_data %>%
+        filter(Pathogen %in% input$list_gram_negative) %>%
+        filter(!is.na(Interpretation))
+      write.csv(data, file, row.names = FALSE)
+    }
+  )
+  
+  output$download_gram_pos <- downloadHandler(
+    filename = function() {
+      paste0("Gram_Positive_AST_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      req(meta_data$processed_data, input$list_gram_positive)
+      data <- meta_data$processed_data %>%
+        filter(Pathogen %in% input$list_gram_positive) %>%
+        filter(!is.na(Interpretation))
+      write.csv(data, file, row.names = FALSE)
+    }
+  )
+  
+  output$download_fungal <- downloadHandler(
+    filename = function() {
+      paste0("Fungal_AST_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      req(meta_data$processed_data, input$list_fungal)
+      data <- meta_data$processed_data %>%
+        filter(Pathogen %in% input$list_fungal) %>%
+        filter(!is.na(Interpretation))
+      write.csv(data, file, row.names = FALSE)
+    }
+  )
 }
 
 ##### 3. Run App #####
