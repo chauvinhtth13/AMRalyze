@@ -211,3 +211,92 @@ binary2gene <- function(x, n, list_gen)
   }
   return(encode)
 }
+
+##### Reusable AST Table Builder #####
+# Creates a standardized gt table for AST data by organism group
+# @param processed_data The processed AST data
+# @param mdr_data The MDR calculated data (can be NULL)
+# @param pathogen_filter Vector of pathogen names to filter
+# @return A gt table object
+build_ast_summary_table <- function(processed_data, mdr_data, pathogen_filter) {
+  if (is.null(mdr_data)) {
+    # When no MDR data, we need to deduplicate by method priority
+    # Priority: MIC > E-Test > Disk (use Method_Priority column if exists)
+    data_sub <- processed_data %>%
+      filter(!is.na(Interpretation)) %>%
+      filter(Pathogen %in% pathogen_filter)
+    
+    # If Method_Priority exists, use it to keep best result per antibiotic
+    if ("Method_Priority" %in% names(data_sub)) {
+      data_sub <- data_sub %>%
+        group_by(across(any_of(c("NoID", "PatientID", "SampleID", "Pathogen", "ab_code")))) %>%
+        slice_min(Method_Priority, n = 1, with_ties = FALSE) %>%
+        ungroup()
+    }
+    
+    data_sub <- data_sub %>%
+      select(any_of(c("NoID", "PatientID", "SampleID", "Pathogen", "ab_code", "Interpretation"))) %>%
+      tidyr::pivot_wider(
+        names_from = ab_code,
+        values_from = Interpretation,
+        values_fn = first  # Handle any remaining duplicates
+      ) %>%
+      select(-c(any_of(c("NoID", "PatientID", "SampleID")))) %>%
+      select(where(~ !all(is.na(.)))) %>%
+      rename_if(is.sir, ab_name) %>%
+      mutate_if(is.sir, .funs = function(x) if_else(x == "R", TRUE, FALSE))
+  } else {
+    # MDR data already has deduplicated interpretations
+    data_sub <- mdr_data %>%
+      filter(Pathogen %in% pathogen_filter) %>%
+      select(-c(any_of(c("NoID", "PatientID", "SampleID", "SampleType", "SampleDate", "mo_code", "kingdom", "gram_stain")))) %>%
+      select(where(~ !all(is.na(.)))) %>%
+      rename_if(is.sir, ab_name) %>%
+      mutate_if(is.sir, .funs = function(x) if_else(x == "R", TRUE, FALSE))
+  }
+  
+  list_ab <- setdiff(names(data_sub), c("Pathogen", "MDR"))
+  
+  gt_table <- data_sub %>%
+    tbl_summary(
+      by = Pathogen,
+      statistic = everything() ~ "{p}% ({n}/{N})",
+      missing = "no",
+      digits = everything() ~ c(1, 1)
+    ) %>%
+    modify_header(label = "") %>%
+    modify_column_indent(columns = label, row = label != "MDR") %>%
+    modify_footnote(all_stat_cols() ~ "Resistant Percent (%), (Resistant case / Total)") %>%
+    modify_table_body(~ .x %>%
+                        mutate(
+                          across(all_stat_cols(), ~ gsub("^NA.*0.0/0.0)", "-", .)),
+                          across(all_stat_cols(), ~ gsub("0\\.0 \\(NA%\\)", "-", .))
+                        )) %>%
+    as_gt() %>%
+    add_group_antibiotic(list_ab = list_ab)
+  
+  return(gt_table)
+}
+
+##### Get Pathogen List by Organism Group #####
+# @param processed_data The processed AST data
+# @param kingdom_filter Filter for kingdom (e.g., "Bacteria", "Fungi")
+# @param gram_stain_filter Filter for gram stain (e.g., "Gram-negative", "Gram-positive")
+# @return Vector of pathogen names sorted by frequency
+get_pathogen_list <- function(processed_data, kingdom_filter = NULL, gram_stain_filter = NULL) {
+  result <- processed_data %>%
+    select(any_of(c("NoID", "PatientID", "SampleID", "Pathogen", "kingdom", "gram_stain"))) %>%
+    unique()
+  
+  if (!is.null(kingdom_filter)) {
+    result <- result %>% filter(kingdom == kingdom_filter)
+  }
+  
+  if (!is.null(gram_stain_filter)) {
+    result <- result %>% filter(gram_stain == gram_stain_filter)
+  }
+  
+  result %>%
+    count(Pathogen, sort = TRUE, name = "Frequency") %>%
+    pull(Pathogen)
+}

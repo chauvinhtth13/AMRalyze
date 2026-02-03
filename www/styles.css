@@ -1,0 +1,124 @@
+/* Import Roboto Font */
+@import url('https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap');
+
+/* =========================
+   Theme Variables (Material Style)
+   ========================= */
+:root {
+  --font-family: 'Roboto', sans-serif;
+  --font-size-base: 1rem;
+  --line-height: 1.5;
+
+  --color-primary:    #6200ee;
+  --color-primary-dark: #3700b3;
+  --color-secondary:  #018786;
+  --color-background: #f5f5f5;
+  --color-surface:    #ffffff;
+  --color-error:      #b00020;
+  --color-on-primary: #ffffff;
+  --color-on-surface: #000000;
+
+  --border-color:     #e0e0e0;
+  --border-radius:    4px;
+  --spacing-sm:       0.5rem;
+  --spacing-md:       1rem;
+  --spacing-lg:       1.5rem;
+
+  /* Material Elevation Shadows */
+  --elevation-1: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  --elevation-2: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+  --elevation-3: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+  --elevation-4: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+}
+
+/* =========================
+   Global Base Styles
+   ========================= */
+html, body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height);
+  background-color: var(--color-background);
+  color: var(--color-on-surface);
+  margin: 0;
+  padding: 0;
+}
+
+/* =========================
+   File Input Component (Material Style)
+   ========================= */
+.shiny-input-container.fileinput {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background-color: var(--color-surface);
+  box-shadow: var(--elevation-1);
+  margin-bottom: var(--spacing-lg);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.shiny-input-container.fileinput:hover {
+  box-shadow: var(--elevation-2);
+  border-color: var(--color-primary);
+}
+.shiny-input-container.fileinput > label.control-label {
+  font-weight: 500;
+  font-size: 1rem;
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-on-surface);
+}
+.shiny-input-container.fileinput .btn-file {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  border: none;
+  border-radius: var(--border-radius);
+  padding: var(--spacing-sm) var(--spacing-md);
+  cursor: pointer;
+  font-size: 1rem;
+  box-shadow: var(--elevation-1);
+}
+.shiny-input-container.fileinput .btn-file:hover {
+  background-color: var(--color-primary-dark);
+  box-shadow: var(--elevation-2);
+}
+.shiny-input-container.fileinput .btn-file input[type='file'] {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+/* Caption: show filename inside outlined field */
+.shiny-input-container.fileinput .file-caption .input-group {
+  margin-top: var(--spacing-sm);
+  width: 100%;
+}
+.shiny-input-container.fileinput .file-caption .form-control {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: #fafafa;
+  color: var(--color-secondary);
+  font-size: 0.9rem;
+  min-height: 2.75rem;
+}
+.shiny-input-container.fileinput .file-caption .form-control::placeholder {
+  color: #999;
+}
+.shiny-input-container.fileinput .file-caption .input-group-text {
+  border: 1px solid var(--border-color);
+  border-left: none;
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+  background-color: #f0f0f0;
+  color: var(--color-secondary);
+}
+/* Hide built-in progress */
+.shiny-file-input-progress {
+  display: none !important;
+}
